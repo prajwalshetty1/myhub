@@ -57,12 +57,24 @@ const AdvancedJournal = {
   },
 
   getClient() {
-    if (window.SupabaseClient && window.location.hostname === 'localhost') {
-      console.log('Using Supabase Direct Client');
-      return window.SupabaseClient;
+    // Always use Supabase Direct Client for localhost/127.0.0.1
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      if (window.SupabaseClient) {
+        console.log('✅ Using Supabase Direct Client (Local Development)');
+        return window.SupabaseClient;
+      } else {
+        console.warn('⚠️ SupabaseClient not found! Make sure supabase-client.js is loaded.');
+      }
     }
-    console.log('Using Backend API Client');
-    return window.API;
+    
+    // Use backend API for production
+    if (window.API) {
+      console.log('✅ Using Backend API Client (Production)');
+      return window.API;
+    }
+    
+    console.error('❌ No API client available!');
+    return null;
   },
 
   // Initialize Quill Rich Text Editor
@@ -96,10 +108,16 @@ const AdvancedJournal = {
       console.log('📚 Loading journal entries...');
       const client = this.getClient();
       
+      if (!client) {
+        throw new Error('No API client available');
+      }
+      
       if (client.getJournalEntries) {
         this.entries = await client.getJournalEntries();
-      } else {
+      } else if (client.request) {
         this.entries = await client.request('/journal');
+      } else {
+        throw new Error('Client does not have required methods');
       }
       
       this.filteredEntries = [...this.entries];
@@ -367,20 +385,24 @@ const AdvancedJournal = {
 
       console.log('📤 Sending to API:', entryData);
 
+      if (!client) {
+        throw new Error('No API client available');
+      }
+
       let saved;
       if (client.saveJournalEntry) {
         // Supabase direct client
-        console.log('📡 Using Supabase Direct Client');
+        console.log('📡 Using Supabase Direct Client saveJournalEntry()');
         saved = await client.saveJournalEntry(entryData);
-      } else if (window.API && window.API.request) {
+      } else if (client.request) {
         // Backend API client
-        console.log('📡 Using Backend API Client');
-        saved = await window.API.request('/journal', {
+        console.log('📡 Using Backend API Client request()');
+        saved = await client.request('/journal', {
           method: 'POST',
           body: JSON.stringify(entryData)
         });
       } else {
-        throw new Error('No API client available');
+        throw new Error('Client does not have required methods');
       }
 
       console.log('✅ Entry saved:', saved);
