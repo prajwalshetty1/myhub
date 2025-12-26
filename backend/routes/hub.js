@@ -11,7 +11,7 @@ router.get('/habits', authenticateToken, async (req, res) => {
       'SELECT habits_data FROM hub_habits WHERE user_id = $1',
       [req.user.userId]
     );
-    res.json(result.rows[0]?.habits_data || []);
+    res.json((result.rows[0] && result.rows[0].habits_data) || []);
   } catch (error) {
     console.error('Error fetching habits:', error);
     res.status(500).json({ error: 'Failed to fetch habits' });
@@ -42,7 +42,7 @@ router.get('/habit-logs/:date', authenticateToken, async (req, res) => {
       'SELECT habit_logs FROM hub_habit_logs WHERE user_id = $1 AND date = $2',
       [req.user.userId, req.params.date]
     );
-    res.json(result.rows[0]?.habit_logs || {});
+    res.json((result.rows[0] && result.rows[0].habit_logs) || {});
   } catch (error) {
     console.error('Error fetching habit logs:', error);
     res.status(500).json({ error: 'Failed to fetch habit logs' });
@@ -73,7 +73,7 @@ router.get('/intentions/:date', authenticateToken, async (req, res) => {
       'SELECT intentions_data FROM hub_intentions WHERE user_id = $1 AND date = $2',
       [req.user.userId, req.params.date]
     );
-    res.json(result.rows[0]?.intentions_data || {});
+    res.json((result.rows[0] && result.rows[0].intentions_data) || {});
   } catch (error) {
     console.error('Error fetching intentions:', error);
     res.status(500).json({ error: 'Failed to fetch intentions' });

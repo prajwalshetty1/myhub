@@ -54,7 +54,7 @@ router.get('/selected-tasks/:date', authenticateToken, async (req, res) => {
       'SELECT task_data FROM phoenix_selected_tasks WHERE user_id = $1 AND date = $2',
       [req.user.userId, req.params.date]
     );
-    res.json(result.rows[0]?.task_data || []);
+    res.json((result.rows[0] && result.rows[0].task_data) || []);
   } catch (error) {
     console.error('Error fetching selected tasks:', error);
     res.status(500).json({ error: 'Failed to fetch selected tasks' });
@@ -85,7 +85,7 @@ router.get('/completed-tasks/:date', authenticateToken, async (req, res) => {
       'SELECT task_titles FROM phoenix_completed_tasks WHERE user_id = $1 AND date = $2',
       [req.user.userId, req.params.date]
     );
-    res.json(result.rows[0]?.task_titles || []);
+    res.json((result.rows[0] && result.rows[0].task_titles) || []);
   } catch (error) {
     console.error('Error fetching completed tasks:', error);
     res.status(500).json({ error: 'Failed to fetch completed tasks' });
@@ -116,7 +116,7 @@ router.get('/supplements', authenticateToken, async (req, res) => {
       'SELECT supplement_data FROM phoenix_supplements WHERE user_id = $1',
       [req.user.userId]
     );
-    res.json(result.rows[0]?.supplement_data || { morning: [], afternoon: [], evening: [] });
+    res.json((result.rows[0] && result.rows[0].supplement_data) || { morning: [], afternoon: [], evening: [] });
   } catch (error) {
     console.error('Error fetching supplements:', error);
     res.status(500).json({ error: 'Failed to fetch supplements' });
@@ -147,7 +147,7 @@ router.get('/supplements-taken/:date', authenticateToken, async (req, res) => {
       'SELECT supplements_taken FROM phoenix_supplements_taken WHERE user_id = $1 AND date = $2',
       [req.user.userId, req.params.date]
     );
-    res.json(result.rows[0]?.supplements_taken || {});
+    res.json((result.rows[0] && result.rows[0].supplements_taken) || {});
   } catch (error) {
     console.error('Error fetching supplements taken:', error);
     res.status(500).json({ error: 'Failed to fetch supplements taken' });

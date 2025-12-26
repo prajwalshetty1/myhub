@@ -216,7 +216,7 @@ router.get('/mode', authenticateToken, async (req, res) => {
       'SELECT mode FROM trading_mode WHERE user_id = $1',
       [req.user.userId]
     );
-    res.json({ mode: result.rows[0]?.mode || 'futures' });
+    res.json({ mode: (result.rows[0] && result.rows[0].mode) || 'futures' });
   } catch (error) {
     console.error('Error fetching mode:', error);
     res.status(500).json({ error: 'Failed to fetch mode' });
@@ -346,7 +346,7 @@ router.get('/execution-stages', authenticateToken, async (req, res) => {
       'SELECT stage_data FROM trading_execution_stages WHERE user_id = $1',
       [req.user.userId]
     );
-    res.json({ stages: result.rows[0]?.stage_data || {} });
+    res.json({ stages: (result.rows[0] && result.rows[0].stage_data) || {} });
   } catch (error) {
     console.error('Error fetching execution stages:', error);
     res.status(500).json({ error: 'Failed to fetch execution stages' });
@@ -411,7 +411,7 @@ router.get('/watchlist', authenticateToken, async (req, res) => {
       'SELECT symbols FROM trading_watchlist WHERE user_id = $1',
       [req.user.userId]
     );
-    res.json({ symbols: result.rows[0]?.symbols || [] });
+    res.json({ symbols: (result.rows[0] && result.rows[0].symbols) || [] });
   } catch (error) {
     console.error('Error fetching watchlist:', error);
     res.status(500).json({ error: 'Failed to fetch watchlist' });

@@ -48,7 +48,7 @@ router.get('/goals', authenticateToken, async (req, res) => {
       'SELECT goals_data FROM diet_goals WHERE user_id = $1',
       [req.user.userId]
     );
-    res.json(result.rows[0]?.goals_data || { calories: 2000, protein: 150, carbs: 200, fat: 65 });
+    res.json((result.rows[0] && result.rows[0].goals_data) || { calories: 2000, protein: 150, carbs: 200, fat: 65 });
   } catch (error) {
     console.error('Error fetching goals:', error);
     res.status(500).json({ error: 'Failed to fetch goals' });
@@ -79,7 +79,7 @@ router.get('/water/:date', authenticateToken, async (req, res) => {
       'SELECT glasses FROM diet_water WHERE user_id = $1 AND date = $2',
       [req.user.userId, req.params.date]
     );
-    res.json({ water: result.rows[0]?.glasses || 0 });
+    res.json({ water: (result.rows[0] && result.rows[0].glasses) || 0 });
   } catch (error) {
     console.error('Error fetching water:', error);
     res.status(500).json({ error: 'Failed to fetch water' });
