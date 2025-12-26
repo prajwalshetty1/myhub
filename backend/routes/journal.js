@@ -76,11 +76,12 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Date is required' });
     }
 
-    // Calculate word count
-    const word_count = content ? content.trim().split(/\s+/).filter(w => w.length > 0).length : 0;
+    // Calculate word count - strip HTML tags first
+    const textContent = content ? content.replace(/<[^>]*>/g, '') : '';
+    const word_count = textContent.trim().split(/\s+/).filter(w => w.length > 0).length;
 
     // Simple sentiment analysis (basic)
-    const sentiment = analyzeSentiment(content || '');
+    const sentiment = analyzeSentiment(textContent);
 
     const result = await pool.query(
       `INSERT INTO journal_entries (
