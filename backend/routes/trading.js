@@ -9,7 +9,7 @@ router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT * FROM trades ORDER BY COALESCE(exit_date, trade_date) DESC',
-      [null]
+      []
     );
     res.json(result.rows);
   } catch (error) {
@@ -96,7 +96,7 @@ router.get('/positions', async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT * FROM trading_positions ORDER BY entry_date DESC',
-      [null]
+      []
     );
     res.json(result.rows);
   } catch (error) {
@@ -166,7 +166,7 @@ router.get('/settings', async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT * FROM trading_settings',
-      [null]
+      []
     );
     if (result.rows.length === 0) {
       // Return defaults
@@ -213,7 +213,7 @@ router.get('/mode', async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT mode FROM trading_mode',
-      [null]
+      []
     );
     res.json({ mode: (result.rows[0] && result.rows[0].mode) || 'futures' });
   } catch (error) {
@@ -226,11 +226,12 @@ router.get('/mode', async (req, res) => {
 router.post('/mode', async (req, res) => {
   try {
     const { mode } = req.body;
-    await pool.query(
-      `INSERT INTO trading_mode (mode)
-       VALUES ($1)
-       ON CONFLICT () DO UPDATE SET mode = $1`,
-      [null, mode]
+    const result = await pool.query(
+      `INSERT INTO trading_mode (user_id, mode)
+       VALUES (NULL, $1)
+       ON CONFLICT (user_id) DO UPDATE SET mode = $1, updated_at = CURRENT_TIMESTAMP
+       RETURNING *`,
+      [mode || 'futures']
     );
     res.json({ success: true });
   } catch (error) {
@@ -244,8 +245,8 @@ router.post('/mode', async (req, res) => {
 router.get('/planned-trades', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trading_planned_trades ORDER BY date DESC',
-      [null]
+      'SELECT * FROM trading_planned_trades WHERE user_id IS NULL ORDER BY date DESC',
+      []
     );
     res.json(result.rows);
   } catch (error) {
@@ -293,8 +294,8 @@ router.delete('/planned-trades/:id', async (req, res) => {
 router.get('/key-levels', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trading_key_levels ORDER BY date DESC',
-      [null]
+      'SELECT * FROM trading_key_levels WHERE user_id IS NULL ORDER BY date DESC',
+      []
     );
     res.json(result.rows);
   } catch (error) {
@@ -308,10 +309,10 @@ router.post('/key-levels', async (req, res) => {
   try {
     const { symbol, price, type, notes } = req.body;
     const result = await pool.query(
-      `INSERT INTO trading_key_levels (symbol, price, type, notes)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO trading_key_levels (user_id, symbol, price, type, notes)
+       VALUES (NULL, $1, $2, $3, $4)
        RETURNING *`,
-      [null, symbol, price, type, notes || null]
+      [symbol, price, type, notes || null]
     );
     res.json(result.rows[0]);
   } catch (error) {
@@ -343,7 +344,7 @@ router.get('/execution-stages', async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT stage_data FROM trading_execution_stages',
-      [null]
+      []
     );
     res.json({ stages: (result.rows[0] && result.rows[0].stage_data) || {} });
   } catch (error) {
@@ -357,11 +358,11 @@ router.post('/execution-stages', async (req, res) => {
   try {
     const { stages } = req.body;
     const result = await pool.query(
-      `INSERT INTO trading_execution_stages (stage_data)
-       VALUES ($1)
-       ON CONFLICT () DO UPDATE SET stage_data = $1, updated_at = CURRENT_TIMESTAMP
+      `INSERT INTO trading_execution_stages (user_id, stage_data)
+       VALUES (NULL, $1)
+       ON CONFLICT (user_id) DO UPDATE SET stage_data = $1, updated_at = CURRENT_TIMESTAMP
        RETURNING *`,
-      [null, JSON.stringify(stages)]
+      [JSON.stringify(stages)]
     );
     res.json({ success: true });
   } catch (error) {
@@ -375,8 +376,8 @@ router.post('/execution-stages', async (req, res) => {
 router.get('/psychology', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trading_psychology ORDER BY date DESC LIMIT 50',
-      [null]
+      'SELECT * FROM trading_psychology WHERE user_id IS NULL ORDER BY date DESC LIMIT 50',
+      []
     );
     res.json(result.rows);
   } catch (error) {
@@ -390,10 +391,10 @@ router.post('/psychology', async (req, res) => {
   try {
     const { state, notes } = req.body;
     const result = await pool.query(
-      `INSERT INTO trading_psychology (state, notes)
-       VALUES ($1, $2)
+      `INSERT INTO trading_psychology (user_id, state, notes)
+       VALUES (NULL, $1, $2)
        RETURNING *`,
-      [null, state, notes || null]
+      [state, notes || null]
     );
     res.json(result.rows[0]);
   } catch (error) {
@@ -407,8 +408,8 @@ router.post('/psychology', async (req, res) => {
 router.get('/watchlist', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT symbols FROM trading_watchlist',
-      [null]
+      'SELECT symbols FROM trading_watchlist WHERE user_id IS NULL',
+      []
     );
     res.json({ symbols: (result.rows[0] && result.rows[0].symbols) || [] });
   } catch (error) {
@@ -422,11 +423,11 @@ router.post('/watchlist', async (req, res) => {
   try {
     const { symbols } = req.body;
     const result = await pool.query(
-      `INSERT INTO trading_watchlist (symbols)
-       VALUES ($1)
-       ON CONFLICT () DO UPDATE SET symbols = $1, updated_at = CURRENT_TIMESTAMP
+      `INSERT INTO trading_watchlist (user_id, symbols)
+       VALUES (NULL, $1)
+       ON CONFLICT (user_id) DO UPDATE SET symbols = $1, updated_at = CURRENT_TIMESTAMP
        RETURNING *`,
-      [null, symbols]
+      [symbols]
     );
     res.json({ success: true, symbols: result.rows[0].symbols });
   } catch (error) {
@@ -440,8 +441,8 @@ router.post('/watchlist', async (req, res) => {
 router.get('/daily-notes', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trading_daily_notes ORDER BY date DESC',
-      [null]
+      'SELECT * FROM trading_daily_notes WHERE user_id IS NULL ORDER BY date DESC',
+      []
     );
     res.json(result.rows);
   } catch (error) {
@@ -477,12 +478,12 @@ router.post('/daily-notes', async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO trading_daily_notes (date, notes)
-       VALUES ($1, $2)
-       ON CONFLICT (date)
+      `INSERT INTO trading_daily_notes (user_id, date, notes)
+       VALUES (NULL, $1, $2)
+       ON CONFLICT (user_id, date)
        DO UPDATE SET notes = $2, updated_at = CURRENT_TIMESTAMP
        RETURNING *`,
-      [null, date, notes || '']
+      [date, notes || '']
     );
     
     res.json(result.rows[0]);
