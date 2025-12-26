@@ -57,8 +57,8 @@ router.put('/:id', async (req, res) => {
     const { symbol, entryPrice, exitPrice, contracts, shares, direction, setupType, notes, pl, exitReason, exitDate, mode } = req.body;
     const result = await pool.query(
       `UPDATE trades
-       SET symbol = $1, entry_price = $1, exit_price = $2, contracts = $3, shares = $4, direction = $5, setup_type = $6, notes = $7, pl = $8, exit_reason = $9, exit_date = $10, mode = $11
-       WHERE id = $12 AND user_id IS NULL 
+       SET symbol = $1, entry_price = $2, exit_price = $3, contracts = $4, shares = $5, direction = $6, setup_type = $7, notes = $8, pl = $9, exit_reason = $10, exit_date = $11, mode = $12
+       WHERE id = $13 AND user_id IS NULL
        RETURNING *`,
       [symbol, entryPrice, exitPrice, contracts || null, shares || null, direction, setupType || null, notes || null, pl, exitReason || null, exitDate || null, mode || 'futures', req.params.id]
     );
