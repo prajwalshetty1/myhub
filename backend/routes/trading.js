@@ -40,10 +40,10 @@ router.post('/', async (req, res) => {
   try {
     const { symbol, entryPrice, exitPrice, contracts, shares, direction, setupType, notes, pl, exitReason, exitDate, mode } = req.body;
     const result = await pool.query(
-      `INSERT INTO trades (symbol, entry_price, exit_price, contracts, shares, direction, setup_type, notes, pl, exit_reason, exit_date, mode, trade_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      `INSERT INTO trades (user_id, symbol, entry_price, exit_price, contracts, shares, direction, setup_type, notes, pl, exit_reason, exit_date, mode, trade_date)
+       VALUES (NULL, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
-      [null, symbol, entryPrice, exitPrice, contracts || null, shares || null, direction, setupType || null, notes || null, pl, exitReason || null, exitDate || null, mode || 'futures', new Date()]
+      [symbol, entryPrice, exitPrice, contracts || null, shares || null, direction, setupType || null, notes || null, pl, exitReason || null, exitDate || null, mode || 'futures', new Date()]
     );
     res.json(result.rows[0]);
   } catch (error) {
