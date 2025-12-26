@@ -76,49 +76,59 @@ const TradingPlanner = {
   },
 
   // ===== DATA PERSISTENCE =====
+  getClient() {
+    // Use Supabase direct client if available (for local dev when backend is unavailable)
+    return window.SupabaseClient || window.API;
+  },
+
   async loadAllData() {
     try {
+      const client = this.getClient();
+      
       // Load trades
-      this.trades = await window.API.getTrades() || [];
+      this.trades = await client.getTrades() || [];
 
       // Load positions
-      this.positions = await window.API.getPositions() || [];
+      this.positions = await client.getPositions() || [];
 
       // Load mode
-      const modeData = await window.API.getTradingMode();
+      const modeData = await client.getTradingMode ? await client.getTradingMode() : await client.getMode();
       if (modeData.mode) this.mode = modeData.mode;
+      else if (typeof modeData === 'string') this.mode = modeData;
 
       // Load settings
-      const settingsData = await window.API.getTradingSettings();
+      const settingsData = await client.getTradingSettings ? await client.getTradingSettings() : await client.getSettings();
       if (settingsData) {
         this.settings = {
-          futuresBalance: parseFloat(settingsData.futures_balance || 10000),
-          stocksBalance: parseFloat(settingsData.stocks_balance || 195000),
-          dailyLossLimit: parseFloat(settingsData.daily_loss_limit || 500),
-          maxRiskPerTrade: parseFloat(settingsData.max_risk_per_trade || 2)
+          futuresBalance: parseFloat(settingsData.futures_balance || settingsData.futuresBalance || 10000),
+          stocksBalance: parseFloat(settingsData.stocks_balance || settingsData.stocksBalance || 195000),
+          dailyLossLimit: parseFloat(settingsData.daily_loss_limit || settingsData.dailyLossLimit || 500),
+          maxRiskPerTrade: parseFloat(settingsData.max_risk_per_trade || settingsData.maxRiskPerTrade || 2)
         };
       }
 
       // Load planned trades
-      this.plannedTrades = await window.API.getPlannedTrades() || [];
+      this.plannedTrades = await client.getPlannedTrades() || [];
 
       // Load key levels
-      this.keyLevels = await window.API.getKeyLevels() || [];
+      this.keyLevels = await client.getKeyLevels() || [];
 
       // Load execution stages
-      const stagesData = await window.API.getExecutionStages();
+      const stagesData = await client.getExecutionStages();
       if (stagesData.stages) this.executionStages = stagesData.stages;
+      else if (typeof stagesData === 'object') this.executionStages = stagesData;
 
       // Load psychology
-      this.psychology = await window.API.getPsychology() || [];
+      this.psychology = await client.getPsychology() || [];
 
       // Load watchlist
-      const watchlistData = await window.API.getWatchlist();
+      const watchlistData = await client.getWatchlist();
       if (watchlistData.symbols) this.watchlist = watchlistData.symbols;
+      else if (Array.isArray(watchlistData)) this.watchlist = watchlistData;
       else if (this.watchlist.length === 0) {
         // Initialize with defaults if empty
         this.watchlist = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA'];
-        await window.API.saveWatchlist(this.watchlist);
+        await client.saveWatchlist(this.watchlist);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -133,11 +143,14 @@ const TradingPlanner = {
 
   async saveAllData() {
     try {
+      // Use Supabase direct client if available (for local dev when backend is unavailable)
+      const client = window.SupabaseClient || window.API;
+      
       // Save mode
-      await window.API.saveTradingMode(this.mode);
+      await client.saveMode(this.mode);
 
       // Save settings
-      await window.API.saveTradingSettings({
+      await client.saveSettings({
         futuresBalance: this.settings.futuresBalance,
         stocksBalance: this.settings.stocksBalance,
         dailyLossLimit: this.settings.dailyLossLimit,
@@ -145,10 +158,10 @@ const TradingPlanner = {
       });
 
       // Save execution stages
-      await window.API.saveExecutionStages(this.executionStages);
+      await client.saveExecutionStages(this.executionStages);
 
       // Save watchlist
-      await window.API.saveWatchlist(this.watchlist);
+      await client.saveWatchlist(this.watchlist);
     } catch (error) {
       console.error('Error saving data:', error);
     }
@@ -534,7 +547,7 @@ const TradingPlanner = {
         mode: this.mode
       };
       
-      const created = await window.API.createPosition(positionData);
+      const created = await this.getClient().createPosition(positionData);
       this.positions.push(created);
       await this.saveAllData();
       this.renderPositions();
@@ -644,11 +657,11 @@ const TradingPlanner = {
         mode: position.mode
       };
       
-      const createdTrade = await window.API.createTrade(tradeData);
+      const createdTrade = await this.getClient().createTrade(tradeData);
       this.trades.push(createdTrade);
 
       // Remove position
-      await window.API.deletePosition(positionId);
+      await this.getClient().deletePosition(positionId);
       this.positions = this.positions.filter(p => p.id !== positionId);
 
       // Update account balance
@@ -861,14 +874,14 @@ const TradingPlanner = {
     if (!symbol || this.watchlist.includes(symbol)) return;
     
     this.watchlist.push(symbol);
-    await window.API.saveWatchlist(this.watchlist);
+    await this.getClient().saveWatchlist(this.watchlist);
     this.renderWatchlist();
     document.getElementById('newWatchlistSymbol').value = '';
   },
 
   async removeFromWatchlist(symbol) {
     this.watchlist = this.watchlist.filter(s => s !== symbol);
-    await window.API.saveWatchlist(this.watchlist);
+    await this.getClient().saveWatchlist(this.watchlist);
     this.renderWatchlist();
   },
 
@@ -964,7 +977,7 @@ const TradingPlanner = {
         notesTextarea.value = this.dailyNotes[dateStr] || '';
       } else {
         // Fetch from API
-        window.API.getDailyNote(dateStr).then(note => {
+        this.getClient().getDailyNote(dateStr).then(note => {
           const notes = note.notes || '';
           this.dailyNotes[dateStr] = notes;
           notesTextarea.value = notes;
@@ -994,7 +1007,7 @@ const TradingPlanner = {
     const notes = document.getElementById('dailyNotes').value;
     
     try {
-      await window.API.saveDailyNote(this.selectedDate, notes);
+      await this.getClient().saveDailyNote(this.selectedDate, notes);
       this.dailyNotes[this.selectedDate] = notes;
       
       // Show success feedback
@@ -1014,7 +1027,7 @@ const TradingPlanner = {
 
   async loadDailyNotes() {
     try {
-      const notes = await window.API.getDailyNotes();
+      const notes = await this.getClient().getDailyNotes();
       // Convert array to object keyed by date
       this.dailyNotes = {};
       notes.forEach(note => {
@@ -1216,7 +1229,7 @@ const TradingPlanner = {
     const notes = prompt('Notes:') || '';
 
     try {
-      const created = await window.API.createPlannedTrade({
+      const created = await this.getClient().createPlannedTrade({
         symbol: symbol.toUpperCase(),
         direction: direction.toLowerCase(),
         entryPrice,
@@ -1234,7 +1247,7 @@ const TradingPlanner = {
 
   async removePlannedTrade(id) {
     try {
-      await window.API.deletePlannedTrade(id);
+      await this.getClient().deletePlannedTrade(id);
       this.plannedTrades = this.plannedTrades.filter(t => t.id !== id);
       this.renderPlannedTrades();
     } catch (error) {
@@ -1254,7 +1267,7 @@ const TradingPlanner = {
     const notes = prompt('Notes:') || '';
 
     try {
-      const created = await window.API.createKeyLevel({
+      const created = await this.getClient().createKeyLevel({
         symbol: symbol.toUpperCase(),
         price,
         type: type.toLowerCase(),
@@ -1270,7 +1283,7 @@ const TradingPlanner = {
 
   async removeKeyLevel(id) {
     try {
-      await window.API.deleteKeyLevel(id);
+      await this.getClient().deleteKeyLevel(id);
       this.keyLevels = this.keyLevels.filter(l => l.id !== id);
       this.renderKeyLevels();
     } catch (error) {
@@ -1546,7 +1559,7 @@ const TradingPlanner = {
         checkbox.addEventListener('change', async (e) => {
           const stage = e.target.dataset.stage;
           this.executionStages[stage] = e.target.checked;
-          await window.API.saveExecutionStages(this.executionStages);
+          await this.getClient().saveExecutionStages(this.executionStages);
         });
       }
     });
@@ -1593,7 +1606,7 @@ const TradingPlanner = {
     if (!state) return;
 
     try {
-      const created = await window.API.createPsychologyEntry({ state, notes });
+      const created = await this.getClient().createPsychologyEntry({ state, notes });
       this.psychology.push(created);
       document.getElementById('psychologyNotes').value = '';
       this.renderPsychology();
