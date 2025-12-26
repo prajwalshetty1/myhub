@@ -287,6 +287,51 @@ class SupabaseClient {
       method: 'DELETE'
     });
   }
+
+  // Journal Entries
+  async getJournalEntries() {
+    return this.request('/journal_entries?user_id=is.null&order=date.desc');
+  }
+
+  async getJournalEntry(date) {
+    const result = await this.request(`/journal_entries?user_id=is.null&date=eq.${date}`);
+    return result.length > 0 ? result[0] : null;
+  }
+
+  async saveJournalEntry(entry) {
+    const existing = await this.request(`/journal_entries?user_id=is.null&date=eq.${entry.date}`);
+    
+    if (existing.length > 0) {
+      // Update existing
+      const result = await this.request(`/journal_entries?user_id=is.null&date=eq.${entry.date}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          title: entry.title,
+          content: entry.content,
+          mood: entry.mood,
+          tags: entry.tags,
+          updated_at: new Date().toISOString()
+        })
+      });
+      return result[0];
+    } else {
+      // Insert new
+      const result = await this.request('/journal_entries', {
+        method: 'POST',
+        body: JSON.stringify({
+          user_id: null,
+          ...entry
+        })
+      });
+      return result[0];
+    }
+  }
+
+  async deleteJournalEntry(date) {
+    return this.request(`/journal_entries?user_id=is.null&date=eq.${date}`, {
+      method: 'DELETE'
+    });
+  }
 }
 
 // Export for use in Trading Planner
