@@ -9,136 +9,225 @@
   <!-- TradingView Widget -->
   <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 </head>
-<body data-theme="cosmic" class="trading-terminal">
-  <div class="trading-container">
-    <!-- Header -->
-    <header class="terminal-header">
+<body data-theme="cosmic" class="trading-app">
+  <div class="trading-wrapper">
+    <!-- Modern Header -->
+    <header class="trading-header">
       <div class="header-left">
-        <a href="../../index.html" class="btn-terminal">← HUB</a>
-        <h1 class="terminal-title">TRADING PLANNER</h1>
+        <a href="../../index.html" class="back-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          <span>Back to Hub</span>
+        </a>
+        <h1 class="app-title">
+          <span class="title-icon">📈</span>
+          Trading Planner
+        </h1>
       </div>
       <div class="header-right">
-        <div class="account-display">
-          <span class="account-label" id="accountLabel">FUTURES</span>
-          <span class="account-balance" id="accountBalance">$10,000.00</span>
+        <div class="account-info">
+          <div class="account-type" id="accountLabel">Futures</div>
+          <div class="account-balance" id="accountBalance">$10,000.00</div>
         </div>
-        <button class="btn-terminal btn-primary" id="settingsBtn">⚙️</button>
+        <button class="icon-btn" id="settingsBtn" title="Settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
+          </svg>
+        </button>
       </div>
     </header>
 
-    <!-- Risk Management Panel -->
-    <div class="risk-panel" id="riskPanel">
+    <!-- Risk Management Bar -->
+    <div class="risk-bar">
       <div class="risk-item">
-        <span class="risk-label">Daily Limit:</span>
+        <span class="risk-label">Daily Limit</span>
         <span class="risk-value" id="dailyLimit">$500.00</span>
       </div>
+      <div class="risk-divider"></div>
       <div class="risk-item">
-        <span class="risk-label">Used:</span>
+        <span class="risk-label">Used</span>
         <span class="risk-value risk-used" id="dailyUsed">$0.00</span>
       </div>
+      <div class="risk-divider"></div>
       <div class="risk-item">
-        <span class="risk-label">Remaining:</span>
+        <span class="risk-label">Remaining</span>
         <span class="risk-value risk-remaining" id="dailyRemaining">$500.00</span>
       </div>
+      <div class="risk-divider"></div>
       <div class="risk-item">
-        <span class="risk-label">Status:</span>
-        <span class="risk-status" id="riskStatus">🟢 ACTIVE</span>
+        <span class="risk-label">Status</span>
+        <span class="risk-badge" id="riskStatus">
+          <span class="badge-dot"></span>
+          Active
+        </span>
       </div>
     </div>
 
-    <!-- Tab Navigation -->
-    <nav class="tab-nav">
-      <button class="tab-btn active" data-tab="terminal">TERMINAL</button>
-      <button class="tab-btn" data-tab="charts">CHARTS</button>
-      <button class="tab-btn" data-tab="journal">JOURNAL</button>
-      <button class="tab-btn" data-tab="planner">PLANNER</button>
-      <button class="tab-btn" data-tab="analytics">ANALYTICS</button>
-      <button class="tab-btn" data-tab="playbook">PLAYBOOK</button>
+    <!-- Modern Tab Navigation -->
+    <nav class="modern-tabs">
+      <button class="tab-item active" data-tab="terminal">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M9 9h6M9 15h6"/>
+        </svg>
+        <span>Terminal</span>
+      </button>
+      <button class="tab-item" data-tab="charts">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 6 13.5 15.5 8.5 10.5 2 17"/>
+          <polyline points="16 6 22 6 22 12"/>
+        </svg>
+        <span>Charts</span>
+      </button>
+      <button class="tab-item" data-tab="journal">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        <span>Journal</span>
+      </button>
+      <button class="tab-item" data-tab="planner">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+        <span>Planner</span>
+      </button>
+      <button class="tab-item" data-tab="analytics">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        <span>Analytics</span>
+      </button>
+      <button class="tab-item" data-tab="playbook">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+        <span>Playbook</span>
+      </button>
     </nav>
 
     <!-- Tab Content -->
-    <div class="tab-content">
+    <main class="tab-content-wrapper">
       <!-- Terminal Tab -->
-      <div class="tab-pane active" id="terminal-tab">
-        <div class="terminal-grid">
-          <!-- Positions Panel -->
-          <div class="terminal-panel">
-            <div class="panel-header">
-              <h3>POSITIONS</h3>
-              <button class="btn-terminal btn-sm" id="newPositionBtn">+ NEW</button>
+      <div class="tab-panel active" id="terminal-tab">
+        <div class="terminal-layout">
+          <!-- Positions Section -->
+          <section class="card positions-card">
+            <div class="card-header">
+              <h2 class="card-title">Open Positions</h2>
+              <button class="btn-primary btn-sm" id="newPositionBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                New Position
+              </button>
             </div>
-            <div class="positions-list" id="positionsList">
-              <div class="empty-state">No open positions</div>
+            <div class="positions-table-wrapper">
+              <table class="modern-table" id="positionsTable">
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Direction</th>
+                    <th>Entry</th>
+                    <th>Current</th>
+                    <th>Size</th>
+                    <th>P&L</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="positionsList">
+                  <tr>
+                    <td colspan="7" class="empty-state">No open positions</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-          </div>
+          </section>
 
-          <!-- Trade Entry Panel -->
-          <div class="terminal-panel">
-            <div class="panel-header">
-              <h3>TRADE ENTRY</h3>
-              <div class="mode-toggle">
-                <button class="mode-btn active" data-mode="futures">FUTURES</button>
-                <button class="mode-btn" data-mode="stocks">STOCKS</button>
+          <!-- Trade Entry Section -->
+          <section class="card entry-card">
+            <div class="card-header">
+              <h2 class="card-title">Trade Entry</h2>
+              <div class="mode-switch">
+                <button class="switch-btn active" data-mode="futures">Futures</button>
+                <button class="switch-btn" data-mode="stocks">Stocks</button>
               </div>
             </div>
-            <form id="tradeEntryForm" class="trade-entry-form">
-              <div class="form-row">
-                <div class="form-group">
+            <form id="tradeEntryForm" class="modern-form">
+              <div class="form-grid">
+                <div class="form-field">
                   <label>Symbol</label>
-                  <select id="tradeSymbol" class="terminal-input" required>
-                    <option value="">Select...</option>
+                  <select id="tradeSymbol" class="modern-input" required>
+                    <option value="">Select symbol...</option>
                     <optgroup label="Futures" id="futuresOptions">
-                      <option value="MES">MES (Micro E-mini S&P 500)</option>
-                      <option value="MNQ">MNQ (Micro E-mini Nasdaq-100)</option>
-                      <option value="PL">PL (Platinum)</option>
-                      <option value="SIL">SIL (Silver)</option>
+                      <option value="MES">MES - Micro E-mini S&P 500</option>
+                      <option value="MNQ">MNQ - Micro E-mini Nasdaq-100</option>
+                      <option value="PL">PL - Platinum</option>
+                      <option value="SIL">SIL - Silver</option>
                     </optgroup>
                     <optgroup label="Stocks" id="stocksOptions" style="display:none;">
-                      <option value="AAPL">AAPL (Apple)</option>
-                      <option value="MSFT">MSFT (Microsoft)</option>
-                      <option value="GOOGL">GOOGL (Google)</option>
-                      <option value="AMZN">AMZN (Amazon)</option>
-                      <option value="TSLA">TSLA (Tesla)</option>
-                      <option value="NVDA">NVDA (NVIDIA)</option>
+                      <option value="AAPL">AAPL - Apple</option>
+                      <option value="MSFT">MSFT - Microsoft</option>
+                      <option value="GOOGL">GOOGL - Google</option>
+                      <option value="AMZN">AMZN - Amazon</option>
+                      <option value="TSLA">TSLA - Tesla</option>
+                      <option value="NVDA">NVDA - NVIDIA</option>
                     </optgroup>
                   </select>
                 </div>
-                <div class="form-group">
+                <div class="form-field">
                   <label>Direction</label>
-                  <select id="tradeDirection" class="terminal-input" required>
-                    <option value="long">LONG</option>
-                    <option value="short">SHORT</option>
-                  </select>
+                  <div class="direction-buttons">
+                    <button type="button" class="dir-btn long active" data-direction="long">
+                      <span class="dir-icon">↑</span>
+                      Long
+                    </button>
+                    <button type="button" class="dir-btn short" data-direction="short">
+                      <span class="dir-icon">↓</span>
+                      Short
+                    </button>
+                  </div>
+                  <input type="hidden" id="tradeDirection" value="long">
                 </div>
               </div>
 
-              <div class="form-row">
-                <div class="form-group">
+              <div class="form-grid">
+                <div class="form-field">
                   <label>Entry Price</label>
-                  <input type="number" id="entryPrice" class="terminal-input" step="0.01" required>
+                  <input type="number" id="entryPrice" class="modern-input" step="0.01" placeholder="0.00" required>
                 </div>
-                <div class="form-group">
+                <div class="form-field">
                   <label id="sizeLabel">Contracts</label>
-                  <input type="number" id="tradeSize" class="terminal-input" min="1" value="1" required>
+                  <input type="number" id="tradeSize" class="modern-input" min="1" value="1" required>
                 </div>
               </div>
 
-              <div class="form-row">
-                <div class="form-group">
+              <div class="form-grid">
+                <div class="form-field">
                   <label>Stop Loss</label>
-                  <input type="number" id="stopLoss" class="terminal-input" step="0.01">
+                  <input type="number" id="stopLoss" class="modern-input" step="0.01" placeholder="Optional">
                 </div>
-                <div class="form-group">
+                <div class="form-field">
                   <label>Take Profit</label>
-                  <input type="number" id="takeProfit" class="terminal-input" step="0.01">
+                  <input type="number" id="takeProfit" class="modern-input" step="0.01" placeholder="Optional">
                 </div>
               </div>
 
-              <div class="form-row">
-                <div class="form-group">
+              <div class="form-grid">
+                <div class="form-field">
                   <label>Setup Type</label>
-                  <select id="setupType" class="terminal-input">
-                    <option value="">Select...</option>
+                  <select id="setupType" class="modern-input">
+                    <option value="">Select setup...</option>
                     <option value="breakout">Breakout</option>
                     <option value="pullback">Pullback</option>
                     <option value="reversal">Reversal</option>
@@ -146,50 +235,57 @@
                     <option value="range">Range Trade</option>
                   </select>
                 </div>
-                <div class="form-group">
+                <div class="form-field">
                   <label>Risk %</label>
-                  <input type="number" id="riskPercent" class="terminal-input" step="0.1" value="1" min="0.1" max="5">
+                  <input type="number" id="riskPercent" class="modern-input" step="0.1" value="1" min="0.1" max="5">
                 </div>
               </div>
 
               <!-- Risk Calculator -->
-              <div class="risk-calculator">
-                <div class="calc-header">RISK CALCULATOR</div>
-                <div class="calc-row">
-                  <span>Risk Amount:</span>
-                  <span id="riskAmount">$0.00</span>
-                </div>
-                <div class="calc-row">
-                  <span>Position Size:</span>
-                  <span id="calcPositionSize">0</span>
-                </div>
-                <div class="calc-row">
-                  <span>Max Loss:</span>
-                  <span id="maxLoss">$0.00</span>
-                </div>
-                <div class="calc-row">
-                  <span>Max Gain:</span>
-                  <span id="maxGain">$0.00</span>
+              <div class="risk-calc-card">
+                <div class="calc-title">Risk Calculator</div>
+                <div class="calc-grid">
+                  <div class="calc-item">
+                    <span class="calc-label">Risk Amount</span>
+                    <span class="calc-value" id="riskAmount">$0.00</span>
+                  </div>
+                  <div class="calc-item">
+                    <span class="calc-label">Position Size</span>
+                    <span class="calc-value" id="calcPositionSize">0</span>
+                  </div>
+                  <div class="calc-item">
+                    <span class="calc-label">Max Loss</span>
+                    <span class="calc-value loss" id="maxLoss">$0.00</span>
+                  </div>
+                  <div class="calc-item">
+                    <span class="calc-label">Max Gain</span>
+                    <span class="calc-value profit" id="maxGain">$0.00</span>
+                  </div>
                 </div>
               </div>
 
-              <button type="submit" class="btn-terminal btn-primary btn-block">ENTER TRADE</button>
+              <button type="submit" class="btn-primary btn-block">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+                Enter Trade
+              </button>
             </form>
-          </div>
+          </section>
         </div>
       </div>
 
       <!-- Charts Tab -->
-      <div class="tab-pane" id="charts-tab">
-        <div class="chart-container">
-          <div class="chart-header">
-            <select id="chartSymbol" class="terminal-input">
+      <div class="tab-panel" id="charts-tab">
+        <div class="chart-wrapper">
+          <div class="chart-controls">
+            <select id="chartSymbol" class="modern-select">
               <option value="MES">MES</option>
               <option value="MNQ">MNQ</option>
               <option value="PL">PL</option>
               <option value="SIL">SIL</option>
             </select>
-            <select id="chartTimeframe" class="terminal-input">
+            <select id="chartTimeframe" class="modern-select">
               <option value="5">5m</option>
               <option value="15">15m</option>
               <option value="60" selected>1H</option>
@@ -201,47 +297,90 @@
         </div>
       </div>
 
-      <!-- Journal Tab -->
-      <div class="tab-pane" id="journal-tab">
-        <div class="journal-container">
-          <div class="journal-header">
-            <h3>TRADE JOURNAL</h3>
-            <div class="journal-filters">
-              <select id="journalFilter" class="terminal-input">
-                <option value="all">All Trades</option>
-                <option value="futures">Futures Only</option>
-                <option value="stocks">Stocks Only</option>
-                <option value="winners">Winners</option>
-                <option value="losers">Losers</option>
-              </select>
+      <!-- Journal Tab - Split into Daily and Trade Journal -->
+      <div class="tab-panel" id="journal-tab">
+        <div class="journal-wrapper">
+          <!-- Journal Sub-tabs -->
+          <div class="journal-subtabs">
+            <button class="subtab-btn active" data-subtab="daily">Daily Journal</button>
+            <button class="subtab-btn" data-subtab="trades">Trade Journal</button>
+          </div>
+
+          <!-- Daily Journal -->
+          <div class="journal-subpanel active" id="daily-journal">
+            <div class="daily-journal-layout">
+              <div class="journal-calendar-card card">
+                <div class="calendar-header">
+                  <button class="icon-btn-sm" id="prevMonth">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M15 18l-6-6 6-6"/>
+                    </svg>
+                  </button>
+                  <h3 id="calendarMonth">January 2026</h3>
+                  <button class="icon-btn-sm" id="nextMonth">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                  </button>
+                </div>
+                <div class="calendar-grid" id="calendarGrid"></div>
+              </div>
+              <div class="daily-notes-card card">
+                <div class="card-header">
+                  <h3>Daily Notes</h3>
+                  <button class="btn-primary btn-sm" id="saveDailyNotesBtn">Save</button>
+                </div>
+                <div class="selected-date-display" id="selectedDateDisplay">Select a date to add notes</div>
+                <textarea id="dailyNotes" class="modern-textarea" rows="10" placeholder="Write your daily trading notes, observations, and reflections here..."></textarea>
+              </div>
             </div>
           </div>
-          <div class="journal-calendar">
-            <div class="calendar-header">
-              <button class="btn-terminal btn-sm" id="prevMonth">←</button>
-              <h3 id="calendarMonth">January 2026</h3>
-              <button class="btn-terminal btn-sm" id="nextMonth">→</button>
+
+          <!-- Trade Journal -->
+          <div class="journal-subpanel" id="trades-journal">
+            <div class="trade-journal-header">
+              <h2>Trade Journal</h2>
+              <div class="journal-filters">
+                <select id="journalFilter" class="modern-select">
+                  <option value="all">All Trades</option>
+                  <option value="futures">Futures Only</option>
+                  <option value="stocks">Stocks Only</option>
+                  <option value="winners">Winners</option>
+                  <option value="losers">Losers</option>
+                </select>
+              </div>
             </div>
-            <div class="calendar-grid" id="calendarGrid"></div>
+            <div class="trades-list" id="journalTrades"></div>
           </div>
-          <div class="journal-trades" id="journalTrades"></div>
         </div>
       </div>
 
       <!-- Planner Tab -->
-      <div class="tab-pane" id="planner-tab">
-        <div class="planner-container">
-          <div class="planner-section">
-            <div class="section-header">
-              <h3>PLANNED TRADES</h3>
-              <button class="btn-terminal btn-sm" id="newPlannedTradeBtn">+ ADD</button>
+      <div class="tab-panel" id="planner-tab">
+        <div class="planner-layout">
+          <div class="card">
+            <div class="card-header">
+              <h2>Planned Trades</h2>
+              <button class="btn-primary btn-sm" id="newPlannedTradeBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add Trade
+              </button>
             </div>
             <div class="planned-trades-list" id="plannedTradesList"></div>
           </div>
-          <div class="planner-section">
-            <div class="section-header">
-              <h3>KEY LEVELS</h3>
-              <button class="btn-terminal btn-sm" id="newKeyLevelBtn">+ ADD</button>
+          <div class="card">
+            <div class="card-header">
+              <h2>Key Levels</h2>
+              <button class="btn-primary btn-sm" id="newKeyLevelBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add Level
+              </button>
             </div>
             <div class="key-levels-list" id="keyLevelsList"></div>
           </div>
@@ -249,180 +388,245 @@
       </div>
 
       <!-- Analytics Tab -->
-      <div class="tab-pane" id="analytics-tab">
-        <div class="analytics-container">
-          <div class="analytics-stats-grid">
-            <div class="stat-box">
-              <div class="stat-label">Total P&L</div>
-              <div class="stat-value" id="analyticsTotalPL">$0.00</div>
+      <div class="tab-panel" id="analytics-tab">
+        <div class="analytics-wrapper">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon profit">$</div>
+              <div class="stat-content">
+                <div class="stat-label">Total P&L</div>
+                <div class="stat-value" id="analyticsTotalPL">$0.00</div>
+              </div>
             </div>
-            <div class="stat-box">
-              <div class="stat-label">Win Rate</div>
-              <div class="stat-value" id="analyticsWinRate">0%</div>
+            <div class="stat-card">
+              <div class="stat-icon">%</div>
+              <div class="stat-content">
+                <div class="stat-label">Win Rate</div>
+                <div class="stat-value" id="analyticsWinRate">0%</div>
+              </div>
             </div>
-            <div class="stat-box">
-              <div class="stat-label">Avg Win</div>
-              <div class="stat-value" id="analyticsAvgWin">$0.00</div>
+            <div class="stat-card">
+              <div class="stat-icon profit">↑</div>
+              <div class="stat-content">
+                <div class="stat-label">Avg Win</div>
+                <div class="stat-value" id="analyticsAvgWin">$0.00</div>
+              </div>
             </div>
-            <div class="stat-box">
-              <div class="stat-label">Avg Loss</div>
-              <div class="stat-value" id="analyticsAvgLoss">$0.00</div>
+            <div class="stat-card">
+              <div class="stat-icon loss">↓</div>
+              <div class="stat-content">
+                <div class="stat-label">Avg Loss</div>
+                <div class="stat-value" id="analyticsAvgLoss">$0.00</div>
+              </div>
             </div>
-            <div class="stat-box">
-              <div class="stat-label">Profit Factor</div>
-              <div class="stat-value" id="analyticsProfitFactor">0.00</div>
+            <div class="stat-card">
+              <div class="stat-icon">📊</div>
+              <div class="stat-content">
+                <div class="stat-label">Profit Factor</div>
+                <div class="stat-value" id="analyticsProfitFactor">0.00</div>
+              </div>
             </div>
-            <div class="stat-box">
-              <div class="stat-label">Max Drawdown</div>
-              <div class="stat-value" id="analyticsMaxDD">$0.00</div>
+            <div class="stat-card">
+              <div class="stat-icon loss">📉</div>
+              <div class="stat-content">
+                <div class="stat-label">Max Drawdown</div>
+                <div class="stat-value" id="analyticsMaxDD">$0.00</div>
+              </div>
             </div>
           </div>
-          <div class="equity-curve-container">
-            <h3>EQUITY CURVE</h3>
+          <div class="card">
+            <div class="card-header">
+              <h2>Equity Curve</h2>
+            </div>
             <canvas id="equityCurveChart"></canvas>
           </div>
-          <div class="analytics-tables">
-            <div class="analytics-table">
-              <h3>Performance by Setup</h3>
-              <table class="terminal-table" id="setupPerformanceTable"></table>
+          <div class="performance-tables">
+            <div class="card">
+              <div class="card-header">
+                <h3>Performance by Setup</h3>
+              </div>
+              <div class="table-wrapper">
+                <table class="modern-table" id="setupPerformanceTable"></table>
+              </div>
             </div>
-            <div class="analytics-table">
-              <h3>Performance by Symbol</h3>
-              <table class="terminal-table" id="symbolPerformanceTable"></table>
+            <div class="card">
+              <div class="card-header">
+                <h3>Performance by Symbol</h3>
+              </div>
+              <div class="table-wrapper">
+                <table class="modern-table" id="symbolPerformanceTable"></table>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Playbook Tab -->
-      <div class="tab-pane" id="playbook-tab">
-        <div class="playbook-container">
-          <div class="execution-stages">
-            <h3>EXECUTION STAGES</h3>
-            <div class="stages-list" id="executionStagesList">
-              <div class="stage-item">
+      <div class="tab-panel" id="playbook-tab">
+        <div class="playbook-layout">
+          <div class="card">
+            <div class="card-header">
+              <h2>Execution Checklist</h2>
+            </div>
+            <div class="checklist" id="executionStagesList">
+              <div class="checklist-item">
                 <input type="checkbox" id="stage1" data-stage="pre-market">
-                <label for="stage1">Pre-Market Analysis</label>
+                <label for="stage1">
+                  <span class="check-title">Pre-Market Analysis</span>
+                  <span class="check-desc">Review market conditions, news, and key levels</span>
+                </label>
               </div>
-              <div class="stage-item">
+              <div class="checklist-item">
                 <input type="checkbox" id="stage2" data-stage="setup">
-                <label for="stage2">Identify Setup</label>
+                <label for="stage2">
+                  <span class="check-title">Identify Setup</span>
+                  <span class="check-desc">Confirm trading setup and entry criteria</span>
+                </label>
               </div>
-              <div class="stage-item">
+              <div class="checklist-item">
                 <input type="checkbox" id="stage3" data-stage="entry">
-                <label for="stage3">Entry Confirmation</label>
+                <label for="stage3">
+                  <span class="check-title">Entry Confirmation</span>
+                  <span class="check-desc">Verify all entry conditions are met</span>
+                </label>
               </div>
-              <div class="stage-item">
+              <div class="checklist-item">
                 <input type="checkbox" id="stage4" data-stage="management">
-                <label for="stage4">Position Management</label>
+                <label for="stage4">
+                  <span class="check-title">Position Management</span>
+                  <span class="check-desc">Monitor position and adjust stops/targets</span>
+                </label>
               </div>
-              <div class="stage-item">
+              <div class="checklist-item">
                 <input type="checkbox" id="stage5" data-stage="exit">
-                <label for="stage5">Exit Execution</label>
+                <label for="stage5">
+                  <span class="check-title">Exit Execution</span>
+                  <span class="check-desc">Execute exit according to plan</span>
+                </label>
               </div>
-              <div class="stage-item">
+              <div class="checklist-item">
                 <input type="checkbox" id="stage6" data-stage="review">
-                <label for="stage6">Post-Trade Review</label>
+                <label for="stage6">
+                  <span class="check-title">Post-Trade Review</span>
+                  <span class="check-desc">Analyze trade and document lessons learned</span>
+                </label>
               </div>
             </div>
           </div>
-          <div class="psychology-tracker">
-            <h3>PSYCHOLOGY TRACKER</h3>
-            <div class="psychology-form">
-              <div class="form-group">
+          <div class="card">
+            <div class="card-header">
+              <h2>Psychology Tracker</h2>
+            </div>
+            <form class="psychology-form">
+              <div class="form-field">
                 <label>Emotional State</label>
-                <select id="emotionalState" class="terminal-input">
-                  <option value="calm">Calm</option>
-                  <option value="confident">Confident</option>
-                  <option value="anxious">Anxious</option>
-                  <option value="fearful">Fearful</option>
-                  <option value="greedy">Greedy</option>
-                  <option value="frustrated">Frustrated</option>
+                <select id="emotionalState" class="modern-input">
+                  <option value="calm">😌 Calm</option>
+                  <option value="confident">💪 Confident</option>
+                  <option value="anxious">😰 Anxious</option>
+                  <option value="fearful">😨 Fearful</option>
+                  <option value="greedy">💰 Greedy</option>
+                  <option value="frustrated">😤 Frustrated</option>
                 </select>
               </div>
-              <div class="form-group">
+              <div class="form-field">
                 <label>Notes</label>
-                <textarea id="psychologyNotes" class="terminal-input" rows="4"></textarea>
+                <textarea id="psychologyNotes" class="modern-textarea" rows="4" placeholder="How are you feeling? What's affecting your trading mindset?"></textarea>
               </div>
-              <button class="btn-terminal btn-primary" id="savePsychologyBtn">SAVE</button>
-            </div>
-            <div class="psychology-history" id="psychologyHistory"></div>
+              <button type="button" class="btn-primary" id="savePsychologyBtn">Save Entry</button>
+            </form>
+            <div class="psychology-timeline" id="psychologyHistory"></div>
           </div>
         </div>
       </div>
-    </div>
+    </main>
   </div>
 
-  <!-- Modals -->
+  <!-- Modern Modals -->
   <!-- Settings Modal -->
-  <div class="modal-overlay" id="settingsModal">
-    <div class="modal-content terminal-modal">
+  <div class="modal" id="settingsModal">
+    <div class="modal-content">
       <div class="modal-header">
-        <h2>SETTINGS</h2>
-        <button class="modal-close" id="closeSettingsModal">&times;</button>
+        <h2>Settings</h2>
+        <button class="modal-close" id="closeSettingsModal">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
       </div>
-      <div class="settings-content">
+      <div class="modal-body">
         <div class="settings-section">
           <h3>Account Settings</h3>
-          <div class="form-group">
+          <div class="form-field">
             <label>Futures Account Balance</label>
-            <input type="number" id="futuresBalance" class="terminal-input" value="10000" step="100">
+            <input type="number" id="futuresBalance" class="modern-input" value="10000" step="100">
           </div>
-          <div class="form-group">
+          <div class="form-field">
             <label>Stocks Account Balance</label>
-            <input type="number" id="stocksBalance" class="terminal-input" value="195000" step="1000">
+            <input type="number" id="stocksBalance" class="modern-input" value="195000" step="1000">
           </div>
         </div>
         <div class="settings-section">
           <h3>Risk Management</h3>
-          <div class="form-group">
+          <div class="form-field">
             <label>Daily Loss Limit ($)</label>
-            <input type="number" id="dailyLossLimit" class="terminal-input" value="500" step="50">
+            <input type="number" id="dailyLossLimit" class="modern-input" value="500" step="50">
           </div>
-          <div class="form-group">
+          <div class="form-field">
             <label>Max Risk Per Trade (%)</label>
-            <input type="number" id="maxRiskPerTrade" class="terminal-input" value="2" step="0.1" min="0.1" max="5">
+            <input type="number" id="maxRiskPerTrade" class="modern-input" value="2" step="0.1" min="0.1" max="5">
           </div>
         </div>
         <div class="settings-section">
           <h3>Watchlist</h3>
-          <div class="watchlist-manager" id="watchlistManager"></div>
-          <input type="text" id="newWatchlistSymbol" class="terminal-input" placeholder="Add symbol (e.g., AAPL)">
-          <button class="btn-terminal btn-sm" id="addWatchlistBtn">ADD</button>
+          <div class="watchlist-tags" id="watchlistManager"></div>
+          <div class="form-field">
+            <input type="text" id="newWatchlistSymbol" class="modern-input" placeholder="Add symbol (e.g., AAPL)">
+            <button type="button" class="btn-primary btn-sm" id="addWatchlistBtn">Add</button>
+          </div>
         </div>
-        <button class="btn-terminal btn-primary btn-block" id="saveSettingsBtn">SAVE SETTINGS</button>
+        <button class="btn-primary btn-block" id="saveSettingsBtn">Save Settings</button>
       </div>
     </div>
   </div>
 
   <!-- Close Position Modal -->
-  <div class="modal-overlay" id="closePositionModal">
-    <div class="modal-content terminal-modal">
+  <div class="modal" id="closePositionModal">
+    <div class="modal-content">
       <div class="modal-header">
-        <h2>CLOSE POSITION</h2>
-        <button class="modal-close" id="closePositionModalBtn">&times;</button>
+        <h2>Close Position</h2>
+        <button class="modal-close" id="closePositionModalBtn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
       </div>
-      <form id="closePositionForm">
-        <div class="form-group">
+      <form id="closePositionForm" class="modal-body">
+        <div class="form-field">
           <label>Exit Price</label>
-          <input type="number" id="closeExitPrice" class="terminal-input" step="0.01" required>
+          <input type="number" id="closeExitPrice" class="modern-input" step="0.01" required>
         </div>
-        <div class="form-group">
+        <div class="form-field">
           <label>Exit Reason</label>
-          <select id="closeReason" class="terminal-input">
+          <select id="closeReason" class="modern-input">
             <option value="target">Target Hit</option>
             <option value="stop">Stop Loss</option>
             <option value="manual">Manual Close</option>
             <option value="time">Time Stop</option>
           </select>
         </div>
-        <div class="form-group">
+        <div class="form-field">
           <label>Notes</label>
-          <textarea id="closeNotes" class="terminal-input" rows="3"></textarea>
+          <textarea id="closeNotes" class="modern-textarea" rows="3"></textarea>
         </div>
-        <div class="pl-display" id="closePLDisplay">P&L: $0.00</div>
+        <div class="pl-display" id="closePLDisplay">
+          <span class="pl-label">P&L:</span>
+          <span class="pl-value">$0.00</span>
+        </div>
         <input type="hidden" id="closePositionId">
-        <button type="submit" class="btn-terminal btn-primary btn-block">CLOSE POSITION</button>
+        <button type="submit" class="btn-primary btn-block">Close Position</button>
       </form>
     </div>
   </div>
@@ -430,3 +634,4 @@
   <script src="app.js"></script>
 </body>
 </html>
+

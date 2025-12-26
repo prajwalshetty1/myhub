@@ -29,8 +29,10 @@ const TradingPlanner = {
   executionStages: {},
   psychology: [],
   watchlist: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA'],
+  dailyNotes: {},
   currentCalendarMonth: new Date().getMonth(),
   currentCalendarYear: 2026,
+  selectedDate: null,
 
   // Futures Contracts Data
   contracts: {
@@ -65,6 +67,7 @@ const TradingPlanner = {
 
   async init() {
     await this.loadAllData();
+    this.loadDailyNotes();
     this.setupEventListeners();
     this.render();
     this.initTradingView();
@@ -214,18 +217,37 @@ const TradingPlanner = {
   // ===== EVENT LISTENERS =====
   setupEventListeners() {
     // Tab navigation
-    document.querySelectorAll('.tab-btn').forEach(btn => {
+    document.querySelectorAll('.tab-item').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const tab = e.target.dataset.tab;
+        const tab = e.currentTarget.dataset.tab;
         this.switchTab(tab);
       });
     });
 
-    // Mode toggle
-    document.querySelectorAll('.mode-btn').forEach(btn => {
+    // Journal sub-tabs
+    document.querySelectorAll('.subtab-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const mode = e.target.dataset.mode;
+        const subtab = e.currentTarget.dataset.subtab;
+        this.switchJournalSubtab(subtab);
+      });
+    });
+
+    // Mode toggle
+    document.querySelectorAll('.switch-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const mode = e.currentTarget.dataset.mode;
         this.switchMode(mode);
+      });
+    });
+
+    // Direction buttons
+    document.querySelectorAll('.dir-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const direction = e.currentTarget.dataset.direction;
+        document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        document.getElementById('tradeDirection').value = direction;
+        this.updateRiskCalculator();
       });
     });
 
@@ -247,6 +269,15 @@ const TradingPlanner = {
     if (settingsBtn) settingsBtn.addEventListener('click', () => this.openSettings());
     if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => this.closeSettings());
     if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', () => this.saveSettings());
+
+    // Modal overlay clicks
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.remove('active');
+        }
+      });
+    });
 
     // New position button
     const newPosBtn = document.getElementById('newPositionBtn');
@@ -273,7 +304,11 @@ const TradingPlanner = {
 
     // Journal filter
     const journalFilter = document.getElementById('journalFilter');
-    if (journalFilter) journalFilter.addEventListener('change', () => this.renderJournal());
+    if (journalFilter) journalFilter.addEventListener('change', () => this.renderTradeJournal());
+
+    // Daily notes
+    const saveDailyNotesBtn = document.getElementById('saveDailyNotesBtn');
+    if (saveDailyNotesBtn) saveDailyNotesBtn.addEventListener('click', () => this.saveDailyNotes());
 
     // Planner
     const newPlannedBtn = document.getElementById('newPlannedTradeBtn');
@@ -303,13 +338,13 @@ const TradingPlanner = {
   // ===== TAB MANAGEMENT =====
   switchTab(tabName) {
     // Update tab buttons
-    document.querySelectorAll('.tab-btn').forEach(btn => {
+    document.querySelectorAll('.tab-item').forEach(btn => {
       btn.classList.remove('active');
       if (btn.dataset.tab === tabName) btn.classList.add('active');
     });
 
-    // Update tab panes
-    document.querySelectorAll('.tab-pane').forEach(pane => {
+    // Update tab panels
+    document.querySelectorAll('.tab-panel').forEach(pane => {
       pane.classList.remove('active');
     });
 
@@ -318,11 +353,31 @@ const TradingPlanner = {
       activePane.classList.add('active');
       
       // Render specific tab content
-      if (tabName === 'journal') this.renderJournal();
+      if (tabName === 'journal') {
+        this.renderJournal();
+        this.switchJournalSubtab('daily'); // Default to daily journal
+      }
       else if (tabName === 'planner') this.renderPlanner();
       else if (tabName === 'analytics') this.renderAnalytics();
       else if (tabName === 'playbook') this.renderPlaybook();
       else if (tabName === 'charts') this.updateTradingView();
+    }
+  },
+
+  switchJournalSubtab(subtab) {
+    document.querySelectorAll('.subtab-btn').forEach(btn => {
+      btn.classList.remove('active');
+      if (btn.dataset.subtab === subtab) btn.classList.add('active');
+    });
+
+    document.querySelectorAll('.journal-subpanel').forEach(panel => {
+      panel.classList.remove('active');
+    });
+
+    const activePanel = document.getElementById(`${subtab === 'daily' ? 'daily' : 'trades'}-journal`);
+    if (activePanel) {
+      activePanel.classList.add('active');
+      if (subtab === 'trades') this.renderTradeJournal();
     }
   },
 
@@ -331,7 +386,7 @@ const TradingPlanner = {
     this.mode = mode;
     
     // Update UI
-    document.querySelectorAll('.mode-btn').forEach(btn => {
+    document.querySelectorAll('.switch-btn').forEach(btn => {
       btn.classList.remove('active');
       if (btn.dataset.mode === mode) btn.classList.add('active');
     });
@@ -367,39 +422,34 @@ const TradingPlanner = {
   },
 
   renderPositions() {
-    const list = document.getElementById('positionsList');
-    if (!list) return;
+    const tbody = document.getElementById('positionsList');
+    if (!tbody) return;
 
     if (this.positions.length === 0) {
-      list.innerHTML = '<div class="empty-state">No open positions</div>';
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No open positions</td></tr>';
       return;
     }
 
-    list.innerHTML = this.positions.map(pos => {
+    tbody.innerHTML = this.positions.map(pos => {
       const pl = this.calculatePositionPL(pos);
-      const plClass = pl >= 0 ? 'positive' : 'negative';
+      const plClass = pl >= 0 ? 'profit' : 'loss';
       const plSign = pl >= 0 ? '+' : '';
+      const pct = ((pl / (parseFloat(pos.entry_price) * pos.size)) * 100).toFixed(2);
       
       return `
-        <div class="position-item ${pl >= 0 ? 'profit' : 'loss'}" data-position-id="${pos.id}">
-          <div>
-            <div class="position-symbol">${pos.symbol}</div>
-            <div class="position-details">${pos.direction.toUpperCase()} | ${pos.size} ${(pos.mode || this.mode) === 'futures' ? 'contracts' : 'shares'}</div>
-          </div>
-          <div>
-            <div class="position-details">Entry: $${parseFloat(pos.entry_price).toFixed(2)}</div>
-            <div class="position-details">Stop: $${pos.stop_loss ? parseFloat(pos.stop_loss).toFixed(2) : 'N/A'}</div>
-          </div>
-          <div>
-            <div class="position-details">Target: $${pos.take_profit ? parseFloat(pos.take_profit).toFixed(2) : 'N/A'}</div>
-            <div class="position-details">Current: $${(pos.current_price || pos.entry_price).toFixed(2)}</div>
-          </div>
-          <div>
-            <div class="position-pl ${plClass}">${plSign}$${pl.toFixed(2)}</div>
-            <div class="position-details">${((pl / (parseFloat(pos.entry_price) * pos.size)) * 100).toFixed(2)}%</div>
-          </div>
-          <button class="btn-terminal btn-sm" onclick="TradingPlanner.openClosePositionModal('${pos.id}')">CLOSE</button>
-        </div>
+        <tr>
+          <td><strong>${pos.symbol}</strong></td>
+          <td>
+            <span class="direction-badge ${pos.direction}">${pos.direction.toUpperCase()}</span>
+          </td>
+          <td>$${parseFloat(pos.entry_price).toFixed(2)}</td>
+          <td>$${(pos.current_price || pos.entry_price).toFixed(2)}</td>
+          <td>${pos.size} ${(pos.mode || this.mode) === 'futures' ? 'contracts' : 'shares'}</td>
+          <td class="position-pl ${plClass}">${plSign}$${pl.toFixed(2)}<br><small>${pct}%</small></td>
+          <td>
+            <button class="btn-primary btn-sm" onclick="TradingPlanner.openClosePositionModal('${pos.id}')">Close</button>
+          </td>
+        </tr>
       `;
     }).join('');
   },
@@ -508,7 +558,8 @@ const TradingPlanner = {
   },
 
   closePositionModal() {
-    document.getElementById('closePositionModal').classList.remove('active');
+    const modal = document.getElementById('closePositionModal');
+    if (modal) modal.classList.remove('active');
   },
 
   updateClosePL() {
@@ -529,8 +580,11 @@ const TradingPlanner = {
 
     const plDisplay = document.getElementById('closePLDisplay');
     if (plDisplay) {
-      plDisplay.textContent = `P&L: ${pl >= 0 ? '+' : ''}$${pl.toFixed(2)}`;
-      plDisplay.style.color = pl >= 0 ? '#00ff00' : '#ff4444';
+      const plValue = plDisplay.querySelector('.pl-value');
+      if (plValue) {
+        plValue.textContent = `${pl >= 0 ? '+' : ''}$${pl.toFixed(2)}`;
+        plValue.className = `pl-value ${pl >= 0 ? 'profit' : 'loss'}`;
+      }
     }
   },
 
@@ -606,7 +660,7 @@ const TradingPlanner = {
 
       await this.saveAllData();
       this.renderPositions();
-      this.renderJournal();
+      this.renderTradeJournal();
       this.updateAccountDisplay();
       this.updateRiskPanel();
       this.closePositionModal();
@@ -665,17 +719,39 @@ const TradingPlanner = {
     }
 
     // Update display
-    document.getElementById('riskAmount').textContent = `$${riskAmount.toFixed(2)}`;
-    document.getElementById('calcPositionSize').textContent = calculatedSize;
-    document.getElementById('maxLoss').textContent = `$${maxLoss.toFixed(2)}`;
-    document.getElementById('maxGain').textContent = `$${maxGain.toFixed(2)}`;
+    const riskAmountEl = document.getElementById('riskAmount');
+    const calcSizeEl = document.getElementById('calcPositionSize');
+    const maxLossEl = document.getElementById('maxLoss');
+    const maxGainEl = document.getElementById('maxGain');
+    
+    if (riskAmountEl) riskAmountEl.textContent = `$${riskAmount.toFixed(2)}`;
+    if (calcSizeEl) calcSizeEl.textContent = calculatedSize;
+    if (maxLossEl) {
+      maxLossEl.textContent = `$${maxLoss.toFixed(2)}`;
+      maxLossEl.className = 'calc-value loss';
+    }
+    if (maxGainEl) {
+      maxGainEl.textContent = `$${maxGain.toFixed(2)}`;
+      maxGainEl.className = 'calc-value profit';
+    }
   },
 
   clearRiskCalculator() {
-    document.getElementById('riskAmount').textContent = '$0.00';
-    document.getElementById('calcPositionSize').textContent = '0';
-    document.getElementById('maxLoss').textContent = '$0.00';
-    document.getElementById('maxGain').textContent = '$0.00';
+    const riskAmountEl = document.getElementById('riskAmount');
+    const calcSizeEl = document.getElementById('calcPositionSize');
+    const maxLossEl = document.getElementById('maxLoss');
+    const maxGainEl = document.getElementById('maxGain');
+    
+    if (riskAmountEl) riskAmountEl.textContent = '$0.00';
+    if (calcSizeEl) calcSizeEl.textContent = '0';
+    if (maxLossEl) {
+      maxLossEl.textContent = '$0.00';
+      maxLossEl.className = 'calc-value';
+    }
+    if (maxGainEl) {
+      maxGainEl.textContent = '$0.00';
+      maxGainEl.className = 'calc-value';
+    }
   },
 
   // ===== RISK PANEL =====
@@ -689,20 +765,33 @@ const TradingPlanner = {
     const dailyLimit = this.settings.dailyLossLimit;
     const remaining = dailyLimit + todayPL; // If PL is negative, remaining increases
 
-    document.getElementById('dailyLimit').textContent = `$${dailyLimit.toFixed(2)}`;
-    document.getElementById('dailyUsed').textContent = `$${Math.abs(Math.min(0, todayPL)).toFixed(2)}`;
-    document.getElementById('dailyRemaining').textContent = `$${remaining.toFixed(2)}`;
+    const dailyLimitEl = document.getElementById('dailyLimit');
+    const dailyUsedEl = document.getElementById('dailyUsed');
+    const dailyRemainingEl = document.getElementById('dailyRemaining');
+    
+    if (dailyLimitEl) dailyLimitEl.textContent = `$${dailyLimit.toFixed(2)}`;
+    if (dailyUsedEl) dailyUsedEl.textContent = `$${Math.abs(Math.min(0, todayPL)).toFixed(2)}`;
+    if (dailyRemainingEl) dailyRemainingEl.textContent = `$${remaining.toFixed(2)}`;
 
     const statusEl = document.getElementById('riskStatus');
+    if (!statusEl) return;
+    
+    const badgeDot = statusEl.querySelector('.badge-dot');
     if (remaining <= 0) {
-      statusEl.textContent = '🔴 LOCKED';
-      statusEl.style.color = '#ff4444';
+      statusEl.innerHTML = '<span class="badge-dot" style="background: #f87171;"></span> Locked';
+      statusEl.style.color = '#f87171';
+      statusEl.style.background = 'rgba(248, 113, 113, 0.1)';
+      statusEl.style.borderColor = 'rgba(248, 113, 113, 0.3)';
     } else if (remaining < dailyLimit * 0.2) {
-      statusEl.textContent = '🟡 WARNING';
-      statusEl.style.color = '#ffaa00';
+      statusEl.innerHTML = '<span class="badge-dot" style="background: #fbbf24;"></span> Warning';
+      statusEl.style.color = '#fbbf24';
+      statusEl.style.background = 'rgba(251, 191, 36, 0.1)';
+      statusEl.style.borderColor = 'rgba(251, 191, 36, 0.3)';
     } else {
-      statusEl.textContent = '🟢 ACTIVE';
-      statusEl.style.color = '#00ff00';
+      statusEl.innerHTML = '<span class="badge-dot"></span> Active';
+      statusEl.style.color = '#4ade80';
+      statusEl.style.background = 'rgba(74, 222, 128, 0.1)';
+      statusEl.style.borderColor = 'rgba(74, 222, 128, 0.3)';
     }
   },
 
@@ -711,22 +800,36 @@ const TradingPlanner = {
     const balance = this.mode === 'futures' ? this.settings.futuresBalance : this.settings.stocksBalance;
     const label = this.mode === 'futures' ? 'FUTURES' : 'STOCKS';
     
-    document.getElementById('accountLabel').textContent = label;
-    document.getElementById('accountBalance').textContent = `$${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const accountLabel = document.getElementById('accountLabel');
+    const accountBalance = document.getElementById('accountBalance');
+    
+    if (accountLabel) accountLabel.textContent = label;
+    if (accountBalance) {
+      accountBalance.textContent = `$${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      accountBalance.style.color = balance >= (this.mode === 'futures' ? 10000 : 195000) ? '#4ade80' : '#f87171';
+    }
   },
 
   // ===== SETTINGS =====
-  async openSettings() {
-    document.getElementById('futuresBalance').value = this.settings.futuresBalance;
-    document.getElementById('stocksBalance').value = this.settings.stocksBalance;
-    document.getElementById('dailyLossLimit').value = this.settings.dailyLossLimit;
-    document.getElementById('maxRiskPerTrade').value = this.settings.maxRiskPerTrade;
+  async   openSettings() {
+    const futuresBalance = document.getElementById('futuresBalance');
+    const stocksBalance = document.getElementById('stocksBalance');
+    const dailyLossLimit = document.getElementById('dailyLossLimit');
+    const maxRiskPerTrade = document.getElementById('maxRiskPerTrade');
+    
+    if (futuresBalance) futuresBalance.value = this.settings.futuresBalance;
+    if (stocksBalance) stocksBalance.value = this.settings.stocksBalance;
+    if (dailyLossLimit) dailyLossLimit.value = this.settings.dailyLossLimit;
+    if (maxRiskPerTrade) maxRiskPerTrade.value = this.settings.maxRiskPerTrade;
+    
     this.renderWatchlist();
-    document.getElementById('settingsModal').classList.add('active');
+    const modal = document.getElementById('settingsModal');
+    if (modal) modal.classList.add('active');
   },
 
   closeSettings() {
-    document.getElementById('settingsModal').classList.remove('active');
+    const modal = document.getElementById('settingsModal');
+    if (modal) modal.classList.remove('active');
   },
 
   async saveSettings() {
@@ -772,6 +875,10 @@ const TradingPlanner = {
   // ===== JOURNAL =====
   renderJournal() {
     this.renderCalendar();
+    this.loadDailyNotes();
+  },
+
+  renderTradeJournal() {
     this.renderJournalTrades();
   },
 
@@ -823,8 +930,8 @@ const TradingPlanner = {
       dayEl.className = 'calendar-day';
       if (dayTrades.length > 0) {
         dayEl.classList.add('has-trades');
-        dayEl.onclick = () => this.filterJournalByDate(dateStr);
       }
+      dayEl.onclick = (e) => this.selectDate(dateStr, e);
 
       dayEl.innerHTML = `
         <div class="calendar-day-number">${day}</div>
@@ -832,6 +939,65 @@ const TradingPlanner = {
       `;
 
       grid.appendChild(dayEl);
+    }
+  },
+
+  selectDate(dateStr, event) {
+    this.selectedDate = dateStr;
+    const date = new Date(dateStr);
+    const dateDisplay = document.getElementById('selectedDateDisplay');
+    const notesTextarea = document.getElementById('dailyNotes');
+    
+    if (dateDisplay) {
+      dateDisplay.textContent = date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    }
+    
+    // Load notes for selected date
+    if (notesTextarea) {
+      notesTextarea.value = this.dailyNotes[dateStr] || '';
+    }
+    
+    // Highlight selected date
+    document.querySelectorAll('.calendar-day').forEach(day => {
+      day.classList.remove('selected');
+    });
+    if (event && event.currentTarget) {
+      event.currentTarget.classList.add('selected');
+    }
+  },
+
+  async saveDailyNotes() {
+    if (!this.selectedDate) {
+      alert('Please select a date first');
+      return;
+    }
+    
+    const notes = document.getElementById('dailyNotes').value;
+    this.dailyNotes[this.selectedDate] = notes;
+    
+    // Save to localStorage for now (can be migrated to API later)
+    localStorage.setItem('tradingDailyNotes', JSON.stringify(this.dailyNotes));
+    
+    // Show success feedback
+    const btn = document.getElementById('saveDailyNotesBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '✓ Saved';
+    btn.style.background = '#4ade80';
+    setTimeout(() => {
+      btn.innerHTML = originalText;
+      btn.style.background = '';
+    }, 2000);
+  },
+
+  loadDailyNotes() {
+    const saved = localStorage.getItem('tradingDailyNotes');
+    if (saved) {
+      this.dailyNotes = JSON.parse(saved);
     }
   },
 
@@ -849,7 +1015,11 @@ const TradingPlanner = {
 
   filterJournalByDate(date) {
     // Filter and highlight trades for selected date
-    this.renderJournalTrades(date);
+    this.renderTradeJournal(date);
+  },
+
+  renderTradeJournal(filterDate = null) {
+    this.renderJournalTrades(filterDate);
   },
 
   renderJournalTrades(filterDate = null) {
@@ -891,39 +1061,44 @@ const TradingPlanner = {
       const plClass = pl >= 0 ? 'profit' : 'loss';
       const plSign = pl >= 0 ? '+' : '';
       const date = new Date(trade.exit_date || trade.trade_date || trade.date);
+      const pct = ((pl / (parseFloat(trade.entry_price) * (trade.contracts || trade.shares))) * 100).toFixed(2);
       
       return `
         <div class="trade-journal-item ${plClass}">
           <div>
-            <div style="font-weight: bold; color: #00ff00; font-size: 1.25rem;">${trade.symbol}</div>
-            <div style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
-              ${date.toLocaleDateString()} ${date.toLocaleTimeString()}
+            <div style="font-weight: 600; color: #fff; font-size: 1.125rem; margin-bottom: 0.25rem;">${trade.symbol}</div>
+            <div style="color: #8b9dc3; font-size: 0.8125rem;">
+              ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
             </div>
           </div>
-          <div style="flex: 1; padding: 0 1rem;">
-            <div style="margin-bottom: 0.5rem;">
-              <span style="color: #888;">Direction:</span> 
-              <span style="color: #00ff00;">${trade.direction.toUpperCase()}</span>
+          <div style="flex: 1; padding: 0 1.5rem;">
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 0.75rem;">
+              <div>
+                <span style="color: #8b9dc3; font-size: 0.75rem;">Direction</span>
+                <div style="color: #fff; font-weight: 500;">${trade.direction.toUpperCase()}</div>
+              </div>
+              <div>
+                <span style="color: #8b9dc3; font-size: 0.75rem;">Size</span>
+                <div style="color: #fff; font-weight: 500;">${trade.contracts || trade.shares} ${trade.contracts ? 'contracts' : 'shares'}</div>
+              </div>
+              <div>
+                <span style="color: #8b9dc3; font-size: 0.75rem;">Entry</span>
+                <div style="color: #fff; font-weight: 500;">$${parseFloat(trade.entry_price).toFixed(2)}</div>
+              </div>
+              <div>
+                <span style="color: #8b9dc3; font-size: 0.75rem;">Exit</span>
+                <div style="color: #fff; font-weight: 500;">$${parseFloat(trade.exit_price).toFixed(2)}</div>
+              </div>
             </div>
-            <div style="margin-bottom: 0.5rem;">
-              <span style="color: #888;">Entry:</span> 
-              <span style="color: #00ff00;">$${parseFloat(trade.entry_price).toFixed(2)}</span>
-              <span style="color: #888;"> → Exit:</span> 
-              <span style="color: #00ff00;">$${parseFloat(trade.exit_price).toFixed(2)}</span>
-            </div>
-            <div style="margin-bottom: 0.5rem;">
-              <span style="color: #888;">Size:</span> 
-              <span style="color: #00ff00;">${trade.contracts || trade.shares} ${trade.contracts ? 'contracts' : 'shares'}</span>
-            </div>
-            ${trade.setup_type ? `<div style="margin-bottom: 0.5rem;"><span style="color: #888;">Setup:</span> <span style="color: #00ff00;">${trade.setup_type}</span></div>` : ''}
-            ${trade.notes ? `<div style="margin-top: 0.5rem; color: #888; font-size: 0.875rem;">${trade.notes}</div>` : ''}
+            ${trade.setup_type ? `<div style="margin-bottom: 0.5rem;"><span style="color: #8b9dc3; font-size: 0.75rem;">Setup:</span> <span style="color: #60a5fa; font-weight: 500;">${trade.setup_type}</span></div>` : ''}
+            ${trade.notes ? `<div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(255, 255, 255, 0.03); border-radius: 6px; color: #8b9dc3; font-size: 0.875rem; line-height: 1.5;">${trade.notes}</div>` : ''}
           </div>
-          <div style="text-align: right;">
-            <div style="font-size: 1.5rem; font-weight: bold; color: ${parseFloat(trade.pl) >= 0 ? '#00ff00' : '#ff4444'};">
-              ${plSign}$${parseFloat(trade.pl).toFixed(2)}
+          <div style="text-align: right; display: flex; flex-direction: column; justify-content: center;">
+            <div style="font-size: 1.5rem; font-weight: 600; color: ${pl >= 0 ? '#4ade80' : '#f87171'}; margin-bottom: 0.25rem;">
+              ${plSign}$${pl.toFixed(2)}
             </div>
-            <div style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
-              ${((parseFloat(trade.pl) / (parseFloat(trade.entry_price) * (trade.contracts || trade.shares))) * 100).toFixed(2)}%
+            <div style="color: #8b9dc3; font-size: 0.75rem;">
+              ${pct}%
             </div>
           </div>
         </div>
@@ -948,14 +1123,28 @@ const TradingPlanner = {
 
     list.innerHTML = this.plannedTrades.map(trade => `
       <div class="planned-trade-item">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-          <strong style="color: #00ff00;">${trade.symbol}</strong>
-          <button class="btn-terminal btn-sm" onclick="TradingPlanner.removePlannedTrade(${trade.id})">REMOVE</button>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+          <div>
+            <strong style="color: #fff; font-size: 1rem; display: block; margin-bottom: 0.25rem;">${trade.symbol}</strong>
+            <span style="color: #8b9dc3; font-size: 0.8125rem; text-transform: uppercase; font-weight: 500;">${trade.direction}</span>
+          </div>
+          <button class="btn-primary btn-sm" onclick="TradingPlanner.removePlannedTrade(${trade.id})" style="background: rgba(248, 113, 113, 0.2); border: 1px solid rgba(248, 113, 113, 0.3); color: #f87171;">Remove</button>
         </div>
-        <div style="color: #888; font-size: 0.875rem;">
-          ${trade.direction.toUpperCase()} | Entry: $${parseFloat(trade.entry_price).toFixed(2)} | Stop: $${trade.stop_loss ? parseFloat(trade.stop_loss).toFixed(2) : 'N/A'} | Target: $${trade.target ? parseFloat(trade.target).toFixed(2) : 'N/A'}
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 0.75rem;">
+          <div>
+            <span style="color: #8b9dc3; font-size: 0.75rem;">Entry</span>
+            <div style="color: #fff; font-weight: 500;">$${parseFloat(trade.entry_price).toFixed(2)}</div>
+          </div>
+          <div>
+            <span style="color: #8b9dc3; font-size: 0.75rem;">Stop</span>
+            <div style="color: #f87171; font-weight: 500;">$${trade.stop_loss ? parseFloat(trade.stop_loss).toFixed(2) : 'N/A'}</div>
+          </div>
+          <div>
+            <span style="color: #8b9dc3; font-size: 0.75rem;">Target</span>
+            <div style="color: #4ade80; font-weight: 500;">$${trade.target ? parseFloat(trade.target).toFixed(2) : 'N/A'}</div>
+          </div>
         </div>
-        ${trade.notes ? `<div style="color: #888; font-size: 0.875rem; margin-top: 0.5rem;">${trade.notes}</div>` : ''}
+        ${trade.notes ? `<div style="padding: 0.75rem; background: rgba(255, 255, 255, 0.03); border-radius: 6px; color: #8b9dc3; font-size: 0.875rem; line-height: 1.5;">${trade.notes}</div>` : ''}
       </div>
     `).join('');
   },
@@ -971,13 +1160,19 @@ const TradingPlanner = {
 
     list.innerHTML = this.keyLevels.map(level => `
       <div class="key-level-item">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-          <strong style="color: #00ff00;">${level.symbol} - $${parseFloat(level.price).toFixed(2)}</strong>
-          <button class="btn-terminal btn-sm" onclick="TradingPlanner.removeKeyLevel(${level.id})">REMOVE</button>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+          <div>
+            <strong style="color: #fff; font-size: 1rem; display: block; margin-bottom: 0.25rem;">${level.symbol}</strong>
+            <div style="color: #60a5fa; font-size: 1.125rem; font-weight: 600;">$${parseFloat(level.price).toFixed(2)}</div>
+          </div>
+          <button class="btn-primary btn-sm" onclick="TradingPlanner.removeKeyLevel(${level.id})" style="background: rgba(248, 113, 113, 0.2); border: 1px solid rgba(248, 113, 113, 0.3); color: #f87171;">Remove</button>
         </div>
-        <div style="color: #888; font-size: 0.875rem;">
-          ${level.type.toUpperCase()} | ${level.notes || ''}
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <span style="background: ${level.type === 'support' ? 'rgba(74, 222, 128, 0.2)' : 'rgba(248, 113, 113, 0.2)'}; color: ${level.type === 'support' ? '#4ade80' : '#f87171'}; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">
+            ${level.type}
+          </span>
         </div>
+        ${level.notes ? `<div style="padding: 0.75rem; background: rgba(255, 255, 255, 0.03); border-radius: 6px; color: #8b9dc3; font-size: 0.875rem; line-height: 1.5;">${level.notes}</div>` : ''}
       </div>
     `).join('');
   },
@@ -1067,12 +1262,19 @@ const TradingPlanner = {
 
   calculateAnalytics() {
     if (this.trades.length === 0) {
-      document.getElementById('analyticsTotalPL').textContent = '$0.00';
-      document.getElementById('analyticsWinRate').textContent = '0%';
-      document.getElementById('analyticsAvgWin').textContent = '$0.00';
-      document.getElementById('analyticsAvgLoss').textContent = '$0.00';
-      document.getElementById('analyticsProfitFactor').textContent = '0.00';
-      document.getElementById('analyticsMaxDD').textContent = '$0.00';
+      const totalPLEl = document.getElementById('analyticsTotalPL');
+      const winRateEl = document.getElementById('analyticsWinRate');
+      const avgWinEl = document.getElementById('analyticsAvgWin');
+      const avgLossEl = document.getElementById('analyticsAvgLoss');
+      const profitFactorEl = document.getElementById('analyticsProfitFactor');
+      const maxDDEl = document.getElementById('analyticsMaxDD');
+      
+      if (totalPLEl) totalPLEl.textContent = '$0.00';
+      if (winRateEl) winRateEl.textContent = '0%';
+      if (avgWinEl) avgWinEl.textContent = '$0.00';
+      if (avgLossEl) avgLossEl.textContent = '$0.00';
+      if (profitFactorEl) profitFactorEl.textContent = '0.00';
+      if (maxDDEl) maxDDEl.textContent = '$0.00';
       return;
     }
 
@@ -1102,13 +1304,31 @@ const TradingPlanner = {
       if (drawdown > maxDD) maxDD = drawdown;
     });
 
-    document.getElementById('analyticsTotalPL').textContent = `$${totalPL >= 0 ? '+' : ''}${totalPL.toFixed(2)}`;
-    document.getElementById('analyticsTotalPL').style.color = totalPL >= 0 ? '#00ff00' : '#ff4444';
-    document.getElementById('analyticsWinRate').textContent = `${winRate.toFixed(1)}%`;
-    document.getElementById('analyticsAvgWin').textContent = `$${avgWin.toFixed(2)}`;
-    document.getElementById('analyticsAvgLoss').textContent = `$${avgLoss.toFixed(2)}`;
-    document.getElementById('analyticsProfitFactor').textContent = profitFactor.toFixed(2);
-    document.getElementById('analyticsMaxDD').textContent = `$${maxDD.toFixed(2)}`;
+    const totalPLEl = document.getElementById('analyticsTotalPL');
+    const winRateEl = document.getElementById('analyticsWinRate');
+    const avgWinEl = document.getElementById('analyticsAvgWin');
+    const avgLossEl = document.getElementById('analyticsAvgLoss');
+    const profitFactorEl = document.getElementById('analyticsProfitFactor');
+    const maxDDEl = document.getElementById('analyticsMaxDD');
+    
+    if (totalPLEl) {
+      totalPLEl.textContent = `$${totalPL >= 0 ? '+' : ''}${totalPL.toFixed(2)}`;
+      totalPLEl.style.color = totalPL >= 0 ? '#4ade80' : '#f87171';
+    }
+    if (winRateEl) winRateEl.textContent = `${winRate.toFixed(1)}%`;
+    if (avgWinEl) {
+      avgWinEl.textContent = `$${avgWin.toFixed(2)}`;
+      avgWinEl.style.color = '#4ade80';
+    }
+    if (avgLossEl) {
+      avgLossEl.textContent = `$${avgLoss.toFixed(2)}`;
+      avgLossEl.style.color = '#f87171';
+    }
+    if (profitFactorEl) profitFactorEl.textContent = profitFactor.toFixed(2);
+    if (maxDDEl) {
+      maxDDEl.textContent = `$${maxDD.toFixed(2)}`;
+      maxDDEl.style.color = '#f87171';
+    }
   },
 
   renderEquityCurve() {
@@ -1143,11 +1363,11 @@ const TradingPlanner = {
     const height = canvas.height - padding * 2;
 
     // Clear canvas
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = '#13172b';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Draw grid
-    ctx.strokeStyle = '#333';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
     ctx.lineWidth = 1;
     for (let i = 0; i <= 5; i++) {
       const y = padding + (height / 5) * i;
@@ -1158,8 +1378,8 @@ const TradingPlanner = {
     }
 
     // Draw equity curve
-    ctx.strokeStyle = '#00ff00';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 3;
     ctx.beginPath();
     equityPoints.forEach((pl, index) => {
       const x = padding + (width / (equityPoints.length - 1 || 1)) * index;
@@ -1175,13 +1395,33 @@ const TradingPlanner = {
     // Draw zero line
     if (minPL < 0 && maxPL > 0) {
       const zeroY = padding + height - ((0 - minPL) / range) * height;
-      ctx.strokeStyle = '#888';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
       ctx.setLineDash([5, 5]);
       ctx.beginPath();
       ctx.moveTo(padding, zeroY);
       ctx.lineTo(canvas.width - padding, zeroY);
       ctx.stroke();
       ctx.setLineDash([]);
+    }
+    
+    // Add gradient fill under curve
+    if (equityPoints.length > 0) {
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.1)';
+      ctx.beginPath();
+      equityPoints.forEach((pl, index) => {
+        const x = padding + (width / (equityPoints.length - 1 || 1)) * index;
+        const y = padding + height - ((pl - minPL) / range) * height;
+        if (index === 0) {
+          ctx.moveTo(x, padding + height);
+          ctx.lineTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+      const lastX = padding + width;
+      ctx.lineTo(lastX, padding + height);
+      ctx.closePath();
+      ctx.fill();
     }
   },
 
@@ -1297,13 +1537,24 @@ const TradingPlanner = {
 
     container.innerHTML = this.psychology.slice(-10).reverse().map(entry => {
       const date = new Date(entry.date || entry.created_at);
+      const stateEmojis = {
+        calm: '😌',
+        confident: '💪',
+        anxious: '😰',
+        fearful: '😨',
+        greedy: '💰',
+        frustrated: '😤'
+      };
       return `
         <div class="psychology-entry">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-            <strong style="color: #00ff00;">${entry.state}</strong>
-            <span style="color: #888; font-size: 0.75rem;">${date.toLocaleString()}</span>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span style="font-size: 1.5rem;">${stateEmojis[entry.state] || '😐'}</span>
+              <strong style="color: #fff; text-transform: capitalize;">${entry.state}</strong>
+            </div>
+            <span style="color: #8b9dc3; font-size: 0.75rem;">${date.toLocaleDateString()} ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
-          ${entry.notes ? `<div style="color: #888;">${entry.notes}</div>` : ''}
+          ${entry.notes ? `<div style="color: #8b9dc3; font-size: 0.875rem; line-height: 1.5; padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">${entry.notes}</div>` : ''}
         </div>
       `;
     }).join('');
@@ -1388,3 +1639,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   await TradingPlanner.init();
 });
+
