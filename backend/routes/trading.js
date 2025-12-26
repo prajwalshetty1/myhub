@@ -126,8 +126,8 @@ router.put('/positions/:id', async (req, res) => {
     const { currentPrice, stopLoss, takeProfit } = req.body;
     const result = await pool.query(
       `UPDATE trading_positions
-       SET current_price = COALESCE($1, current_price), stop_loss = COALESCE($1, stop_loss), take_profit = COALESCE($2, take_profit), updated_at = CURRENT_TIMESTAMP
-       WHERE id = $3 AND user_id IS NULL 
+       SET current_price = COALESCE($1, current_price), stop_loss = COALESCE($2, stop_loss), take_profit = COALESCE($3, take_profit), updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4 AND user_id IS NULL 
        RETURNING *`,
       [currentPrice, stopLoss || null, takeProfit || null, req.params.id]
     );
