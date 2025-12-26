@@ -235,7 +235,7 @@ class APIClient {
     });
   }
 
-  // Trading Planner
+  // Trading Planner - Complete API
   async getTrades() {
     return this.request('/trading');
   }
@@ -264,6 +264,44 @@ class APIClient {
     });
   }
 
+  // Positions
+  async getPositions() {
+    return this.request('/trading/positions');
+  }
+
+  async createPosition(position) {
+    return this.request('/trading/positions', {
+      method: 'POST',
+      body: JSON.stringify(position)
+    });
+  }
+
+  async updatePosition(id, position) {
+    return this.request(`/trading/positions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(position)
+    });
+  }
+
+  async deletePosition(id) {
+    return this.request(`/trading/positions/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Settings
+  async getTradingSettings() {
+    return this.request('/trading/settings');
+  }
+
+  async saveTradingSettings(settings) {
+    return this.request('/trading/settings', {
+      method: 'POST',
+      body: JSON.stringify(settings)
+    });
+  }
+
+  // Mode
   async getTradingMode() {
     return this.request('/trading/mode');
   }
@@ -272,6 +310,78 @@ class APIClient {
     return this.request('/trading/mode', {
       method: 'POST',
       body: JSON.stringify({ mode })
+    });
+  }
+
+  // Planned Trades
+  async getPlannedTrades() {
+    return this.request('/trading/planned-trades');
+  }
+
+  async createPlannedTrade(trade) {
+    return this.request('/trading/planned-trades', {
+      method: 'POST',
+      body: JSON.stringify(trade)
+    });
+  }
+
+  async deletePlannedTrade(id) {
+    return this.request(`/trading/planned-trades/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Key Levels
+  async getKeyLevels() {
+    return this.request('/trading/key-levels');
+  }
+
+  async createKeyLevel(level) {
+    return this.request('/trading/key-levels', {
+      method: 'POST',
+      body: JSON.stringify(level)
+    });
+  }
+
+  async deleteKeyLevel(id) {
+    return this.request(`/trading/key-levels/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Execution Stages
+  async getExecutionStages() {
+    return this.request('/trading/execution-stages');
+  }
+
+  async saveExecutionStages(stages) {
+    return this.request('/trading/execution-stages', {
+      method: 'POST',
+      body: JSON.stringify({ stages })
+    });
+  }
+
+  // Psychology
+  async getPsychology() {
+    return this.request('/trading/psychology');
+  }
+
+  async createPsychologyEntry(entry) {
+    return this.request('/trading/psychology', {
+      method: 'POST',
+      body: JSON.stringify(entry)
+    });
+  }
+
+  // Watchlist
+  async getWatchlist() {
+    return this.request('/trading/watchlist');
+  }
+
+  async saveWatchlist(symbols) {
+    return this.request('/trading/watchlist', {
+      method: 'POST',
+      body: JSON.stringify({ symbols })
     });
   }
 

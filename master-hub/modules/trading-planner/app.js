@@ -63,8 +63,8 @@ const TradingPlanner = {
   // Default Stocks
   defaultStocks: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX'],
 
-  init() {
-    this.loadAllData();
+  async init() {
+    await this.loadAllData();
     this.setupEventListeners();
     this.render();
     this.initTradingView();
@@ -73,56 +73,82 @@ const TradingPlanner = {
   },
 
   // ===== DATA PERSISTENCE =====
-  loadAllData() {
-    // Load trades
-    const savedTrades = localStorage.getItem(this.STORAGE_KEYS.TRADES);
-    if (savedTrades) this.trades = JSON.parse(savedTrades);
+  async loadAllData() {
+    try {
+      // Load trades
+      this.trades = await window.API.getTrades() || [];
 
-    // Load positions
-    const savedPositions = localStorage.getItem(this.STORAGE_KEYS.POSITIONS);
-    if (savedPositions) this.positions = JSON.parse(savedPositions);
+      // Load positions
+      this.positions = await window.API.getPositions() || [];
 
-    // Load mode
-    const savedMode = localStorage.getItem(this.STORAGE_KEYS.MODE);
-    if (savedMode) this.mode = savedMode;
+      // Load mode
+      const modeData = await window.API.getTradingMode();
+      if (modeData.mode) this.mode = modeData.mode;
 
-    // Load settings
-    const savedSettings = localStorage.getItem(this.STORAGE_KEYS.SETTINGS);
-    if (savedSettings) {
-      this.settings = { ...this.settings, ...JSON.parse(savedSettings) };
+      // Load settings
+      const settingsData = await window.API.getTradingSettings();
+      if (settingsData) {
+        this.settings = {
+          futuresBalance: parseFloat(settingsData.futures_balance || 10000),
+          stocksBalance: parseFloat(settingsData.stocks_balance || 195000),
+          dailyLossLimit: parseFloat(settingsData.daily_loss_limit || 500),
+          maxRiskPerTrade: parseFloat(settingsData.max_risk_per_trade || 2)
+        };
+      }
+
+      // Load planned trades
+      this.plannedTrades = await window.API.getPlannedTrades() || [];
+
+      // Load key levels
+      this.keyLevels = await window.API.getKeyLevels() || [];
+
+      // Load execution stages
+      const stagesData = await window.API.getExecutionStages();
+      if (stagesData.stages) this.executionStages = stagesData.stages;
+
+      // Load psychology
+      this.psychology = await window.API.getPsychology() || [];
+
+      // Load watchlist
+      const watchlistData = await window.API.getWatchlist();
+      if (watchlistData.symbols) this.watchlist = watchlistData.symbols;
+      else if (this.watchlist.length === 0) {
+        // Initialize with defaults if empty
+        this.watchlist = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA'];
+        await window.API.saveWatchlist(this.watchlist);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+      // Fallback to empty arrays if API fails
+      this.trades = [];
+      this.positions = [];
+      this.plannedTrades = [];
+      this.keyLevels = [];
+      this.psychology = [];
     }
-
-    // Load planned trades
-    const savedPlanned = localStorage.getItem(this.STORAGE_KEYS.PLANNED_TRADES);
-    if (savedPlanned) this.plannedTrades = JSON.parse(savedPlanned);
-
-    // Load key levels
-    const savedLevels = localStorage.getItem(this.STORAGE_KEYS.KEY_LEVELS);
-    if (savedLevels) this.keyLevels = JSON.parse(savedLevels);
-
-    // Load execution stages
-    const savedStages = localStorage.getItem(this.STORAGE_KEYS.EXECUTION_STAGES);
-    if (savedStages) this.executionStages = JSON.parse(savedStages);
-
-    // Load psychology
-    const savedPsych = localStorage.getItem(this.STORAGE_KEYS.PSYCHOLOGY);
-    if (savedPsych) this.psychology = JSON.parse(savedPsych);
-
-    // Load watchlist
-    const savedWatchlist = localStorage.getItem(this.STORAGE_KEYS.WATCHLIST);
-    if (savedWatchlist) this.watchlist = JSON.parse(savedWatchlist);
   },
 
-  saveAllData() {
-    localStorage.setItem(this.STORAGE_KEYS.TRADES, JSON.stringify(this.trades));
-    localStorage.setItem(this.STORAGE_KEYS.POSITIONS, JSON.stringify(this.positions));
-    localStorage.setItem(this.STORAGE_KEYS.MODE, this.mode);
-    localStorage.setItem(this.STORAGE_KEYS.SETTINGS, JSON.stringify(this.settings));
-    localStorage.setItem(this.STORAGE_KEYS.PLANNED_TRADES, JSON.stringify(this.plannedTrades));
-    localStorage.setItem(this.STORAGE_KEYS.KEY_LEVELS, JSON.stringify(this.keyLevels));
-    localStorage.setItem(this.STORAGE_KEYS.EXECUTION_STAGES, JSON.stringify(this.executionStages));
-    localStorage.setItem(this.STORAGE_KEYS.PSYCHOLOGY, JSON.stringify(this.psychology));
-    localStorage.setItem(this.STORAGE_KEYS.WATCHLIST, JSON.stringify(this.watchlist));
+  async saveAllData() {
+    try {
+      // Save mode
+      await window.API.saveTradingMode(this.mode);
+
+      // Save settings
+      await window.API.saveTradingSettings({
+        futuresBalance: this.settings.futuresBalance,
+        stocksBalance: this.settings.stocksBalance,
+        dailyLossLimit: this.settings.dailyLossLimit,
+        maxRiskPerTrade: this.settings.maxRiskPerTrade
+      });
+
+      // Save execution stages
+      await window.API.saveExecutionStages(this.executionStages);
+
+      // Save watchlist
+      await window.API.saveWatchlist(this.watchlist);
+    } catch (error) {
+      console.error('Error saving data:', error);
+    }
   },
 
   // ===== P&L CALCULATIONS =====
@@ -255,14 +281,7 @@ const TradingPlanner = {
     if (newPlannedBtn) newPlannedBtn.addEventListener('click', () => this.addPlannedTrade());
     if (newKeyLevelBtn) newKeyLevelBtn.addEventListener('click', () => this.addKeyLevel());
 
-    // Execution stages
-    document.querySelectorAll('#executionStagesList input[type="checkbox"]').forEach(checkbox => {
-      checkbox.addEventListener('change', (e) => {
-        const stage = e.target.dataset.stage;
-        this.executionStages[stage] = e.target.checked;
-        this.saveAllData();
-      });
-    });
+    // Execution stages are handled in renderExecutionStages
 
     // Psychology
     const savePsychBtn = document.getElementById('savePsychologyBtn');
@@ -308,7 +327,7 @@ const TradingPlanner = {
   },
 
   // ===== MODE MANAGEMENT =====
-  switchMode(mode) {
+  async switchMode(mode) {
     this.mode = mode;
     
     // Update UI
@@ -334,7 +353,7 @@ const TradingPlanner = {
 
     this.updateAccountDisplay();
     this.updateRiskPanel();
-    this.saveAllData();
+    await this.saveAllData();
   },
 
   // ===== RENDERING =====
@@ -365,19 +384,19 @@ const TradingPlanner = {
         <div class="position-item ${pl >= 0 ? 'profit' : 'loss'}" data-position-id="${pos.id}">
           <div>
             <div class="position-symbol">${pos.symbol}</div>
-            <div class="position-details">${pos.direction.toUpperCase()} | ${pos.size} ${this.mode === 'futures' ? 'contracts' : 'shares'}</div>
+            <div class="position-details">${pos.direction.toUpperCase()} | ${pos.size} ${(pos.mode || this.mode) === 'futures' ? 'contracts' : 'shares'}</div>
           </div>
           <div>
-            <div class="position-details">Entry: $${pos.entryPrice.toFixed(2)}</div>
-            <div class="position-details">Stop: $${pos.stopLoss?.toFixed(2) || 'N/A'}</div>
+            <div class="position-details">Entry: $${parseFloat(pos.entry_price).toFixed(2)}</div>
+            <div class="position-details">Stop: $${pos.stop_loss ? parseFloat(pos.stop_loss).toFixed(2) : 'N/A'}</div>
           </div>
           <div>
-            <div class="position-details">Target: $${pos.takeProfit?.toFixed(2) || 'N/A'}</div>
-            <div class="position-details">Current: $${pos.currentPrice?.toFixed(2) || pos.entryPrice.toFixed(2)}</div>
+            <div class="position-details">Target: $${pos.take_profit ? parseFloat(pos.take_profit).toFixed(2) : 'N/A'}</div>
+            <div class="position-details">Current: $${(pos.current_price || pos.entry_price).toFixed(2)}</div>
           </div>
           <div>
             <div class="position-pl ${plClass}">${plSign}$${pl.toFixed(2)}</div>
-            <div class="position-details">${((pl / (pos.entryPrice * pos.size)) * 100).toFixed(2)}%</div>
+            <div class="position-details">${((pl / (parseFloat(pos.entry_price) * pos.size)) * 100).toFixed(2)}%</div>
           </div>
           <button class="btn-terminal btn-sm" onclick="TradingPlanner.openClosePositionModal('${pos.id}')">CLOSE</button>
         </div>
@@ -386,25 +405,30 @@ const TradingPlanner = {
   },
 
   calculatePositionPL(position) {
-    if (!position.currentPrice) return 0;
+    const currentPrice = position.current_price || position.entry_price;
+    if (!currentPrice) return 0;
 
-    if (this.mode === 'futures') {
+    const entryPrice = position.entry_price;
+    const size = position.size;
+    const mode = position.mode || this.mode;
+
+    if (mode === 'futures') {
       const contract = this.contracts[position.symbol];
       if (!contract) return 0;
       const priceDiff = position.direction === 'long'
-        ? position.currentPrice - position.entryPrice
-        : position.entryPrice - position.currentPrice;
-      return priceDiff * contract.pointValue * position.size;
+        ? currentPrice - entryPrice
+        : entryPrice - currentPrice;
+      return priceDiff * contract.pointValue * size;
     } else {
       const priceDiff = position.direction === 'long'
-        ? position.currentPrice - position.entryPrice
-        : position.entryPrice - position.currentPrice;
-      return priceDiff * position.size;
+        ? currentPrice - entryPrice
+        : entryPrice - currentPrice;
+      return priceDiff * size;
     }
   },
 
   // ===== TRADE ENTRY =====
-  enterTrade() {
+  async enterTrade() {
     const symbol = document.getElementById('tradeSymbol').value;
     const direction = document.getElementById('tradeDirection').value;
     const entryPrice = parseFloat(document.getElementById('entryPrice').value);
@@ -447,20 +471,38 @@ const TradingPlanner = {
       mode: this.mode
     };
 
-    this.positions.push(position);
-    this.saveAllData();
-    this.renderPositions();
-    document.getElementById('tradeEntryForm').reset();
-    this.updateRiskCalculator();
+    try {
+      const positionData = {
+        symbol,
+        direction,
+        entryPrice,
+        size,
+        stopLoss,
+        takeProfit,
+        currentPrice: entryPrice,
+        setupType,
+        mode: this.mode
+      };
+      
+      const created = await window.API.createPosition(positionData);
+      this.positions.push(created);
+      await this.saveAllData();
+      this.renderPositions();
+      document.getElementById('tradeEntryForm').reset();
+      this.updateRiskCalculator();
+    } catch (error) {
+      console.error('Error creating position:', error);
+      alert('Failed to create position. Please try again.');
+    }
   },
 
   // ===== CLOSE POSITION =====
-  openClosePositionModal(positionId) {
-    const position = this.positions.find(p => p.id === positionId);
+  async openClosePositionModal(positionId) {
+    const position = this.positions.find(p => p.id == positionId);
     if (!position) return;
 
     document.getElementById('closePositionId').value = positionId;
-    document.getElementById('closeExitPrice').value = position.currentPrice || position.entryPrice;
+    document.getElementById('closeExitPrice').value = position.current_price || position.entry_price;
     document.getElementById('closePositionModal').classList.add('active');
     this.updateClosePL();
   },
@@ -472,14 +514,14 @@ const TradingPlanner = {
   updateClosePL() {
     const positionId = document.getElementById('closePositionId').value;
     const exitPrice = parseFloat(document.getElementById('closeExitPrice').value) || 0;
-    const position = this.positions.find(p => p.id === positionId);
+    const position = this.positions.find(p => p.id == positionId);
     
     if (!position || !exitPrice) return;
 
     const pl = this.calculatePL({
       symbol: position.symbol,
       direction: position.direction,
-      entryPrice: position.entryPrice,
+      entryPrice: parseFloat(position.entry_price),
       exitPrice: exitPrice,
       contracts: position.size,
       shares: position.size
@@ -492,20 +534,20 @@ const TradingPlanner = {
     }
   },
 
-  closePosition() {
+  async closePosition() {
     const positionId = document.getElementById('closePositionId').value;
     const exitPrice = parseFloat(document.getElementById('closeExitPrice').value);
     const reason = document.getElementById('closeReason').value;
     const notes = document.getElementById('closeNotes').value;
 
-    const position = this.positions.find(p => p.id === positionId);
+    const position = this.positions.find(p => p.id == positionId);
     if (!position) return;
 
     // Calculate P&L
     const pl = this.calculatePL({
       symbol: position.symbol,
       direction: position.direction,
-      entryPrice: position.entryPrice,
+      entryPrice: parseFloat(position.entry_price),
       exitPrice: exitPrice,
       contracts: position.size,
       shares: position.size
@@ -513,42 +555,65 @@ const TradingPlanner = {
 
     // Create trade record
     const trade = {
-      id: Date.now().toString(),
       symbol: position.symbol,
       direction: position.direction,
-      entryPrice: position.entryPrice,
+      entryPrice: parseFloat(position.entry_price),
       exitPrice: exitPrice,
-      contracts: this.mode === 'futures' ? position.size : undefined,
-      shares: this.mode === 'stocks' ? position.size : undefined,
-      stopLoss: position.stopLoss,
-      takeProfit: position.takeProfit,
-      setupType: position.setupType,
+      contracts: (position.mode || this.mode) === 'futures' ? position.size : null,
+      shares: (position.mode || this.mode) === 'stocks' ? position.size : null,
+      stopLoss: position.stop_loss ? parseFloat(position.stop_loss) : null,
+      takeProfit: position.take_profit ? parseFloat(position.take_profit) : null,
+      setupType: position.setup_type,
       exitReason: reason,
       notes: notes,
       pl: pl,
-      date: position.entryDate,
       exitDate: new Date().toISOString(),
-      mode: position.mode
+      mode: position.mode || this.mode
     };
 
-    this.trades.push(trade);
+    try {
+      // Create trade record
+      const tradeData = {
+        symbol: position.symbol,
+        direction: position.direction,
+        entryPrice: position.entry_price,
+        exitPrice: exitPrice,
+        contracts: this.mode === 'futures' ? position.size : null,
+        shares: this.mode === 'stocks' ? position.size : null,
+        stopLoss: position.stop_loss,
+        takeProfit: position.take_profit,
+        setupType: position.setup_type,
+        exitReason: reason,
+        notes: notes,
+        pl: pl,
+        exitDate: new Date().toISOString(),
+        mode: position.mode
+      };
+      
+      const createdTrade = await window.API.createTrade(tradeData);
+      this.trades.push(createdTrade);
 
-    // Remove position
-    this.positions = this.positions.filter(p => p.id !== positionId);
+      // Remove position
+      await window.API.deletePosition(positionId);
+      this.positions = this.positions.filter(p => p.id !== positionId);
 
-    // Update account balance
-    if (this.mode === 'futures') {
-      this.settings.futuresBalance += pl;
-    } else {
-      this.settings.stocksBalance += pl;
+      // Update account balance
+      if (this.mode === 'futures') {
+        this.settings.futuresBalance += pl;
+      } else {
+        this.settings.stocksBalance += pl;
+      }
+
+      await this.saveAllData();
+      this.renderPositions();
+      this.renderJournal();
+      this.updateAccountDisplay();
+      this.updateRiskPanel();
+      this.closePositionModal();
+    } catch (error) {
+      console.error('Error closing position:', error);
+      alert('Failed to close position. Please try again.');
     }
-
-    this.saveAllData();
-    this.renderPositions();
-    this.renderJournal();
-    this.updateAccountDisplay();
-    this.updateRiskPanel();
-    this.closePositionModal();
   },
 
   // ===== RISK CALCULATOR =====
@@ -616,8 +681,11 @@ const TradingPlanner = {
   // ===== RISK PANEL =====
   updateRiskPanel() {
     const today = new Date().toISOString().split('T')[0];
-    const todayTrades = this.trades.filter(t => t.exitDate?.startsWith(today));
-    const todayPL = todayTrades.reduce((sum, t) => sum + t.pl, 0);
+    const todayTrades = this.trades.filter(t => {
+      const exitDate = t.exit_date || t.trade_date || t.date;
+      return exitDate?.startsWith(today);
+    });
+    const todayPL = todayTrades.reduce((sum, t) => sum + parseFloat(t.pl || 0), 0);
     const dailyLimit = this.settings.dailyLossLimit;
     const remaining = dailyLimit + todayPL; // If PL is negative, remaining increases
 
@@ -648,7 +716,7 @@ const TradingPlanner = {
   },
 
   // ===== SETTINGS =====
-  openSettings() {
+  async openSettings() {
     document.getElementById('futuresBalance').value = this.settings.futuresBalance;
     document.getElementById('stocksBalance').value = this.settings.stocksBalance;
     document.getElementById('dailyLossLimit').value = this.settings.dailyLossLimit;
@@ -661,13 +729,13 @@ const TradingPlanner = {
     document.getElementById('settingsModal').classList.remove('active');
   },
 
-  saveSettings() {
+  async saveSettings() {
     this.settings.futuresBalance = parseFloat(document.getElementById('futuresBalance').value);
     this.settings.stocksBalance = parseFloat(document.getElementById('stocksBalance').value);
     this.settings.dailyLossLimit = parseFloat(document.getElementById('dailyLossLimit').value);
     this.settings.maxRiskPerTrade = parseFloat(document.getElementById('maxRiskPerTrade').value);
     
-    this.saveAllData();
+    await this.saveAllData();
     this.updateAccountDisplay();
     this.updateRiskPanel();
     this.closeSettings();
@@ -685,19 +753,19 @@ const TradingPlanner = {
     `).join('');
   },
 
-  addToWatchlist() {
+  async addToWatchlist() {
     const symbol = document.getElementById('newWatchlistSymbol').value.toUpperCase().trim();
     if (!symbol || this.watchlist.includes(symbol)) return;
     
     this.watchlist.push(symbol);
-    this.saveAllData();
+    await window.API.saveWatchlist(this.watchlist);
     this.renderWatchlist();
     document.getElementById('newWatchlistSymbol').value = '';
   },
 
-  removeFromWatchlist(symbol) {
+  async removeFromWatchlist(symbol) {
     this.watchlist = this.watchlist.filter(s => s !== symbol);
-    this.saveAllData();
+    await window.API.saveWatchlist(this.watchlist);
     this.renderWatchlist();
   },
 
@@ -745,7 +813,11 @@ const TradingPlanner = {
     // Days of month
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${this.currentCalendarYear}-${String(this.currentCalendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const dayTrades = this.trades.filter(t => t.date?.startsWith(dateStr) || t.exitDate?.startsWith(dateStr));
+      const dayTrades = this.trades.filter(t => {
+        const tradeDate = t.trade_date || t.date;
+        const exitDate = t.exit_date;
+        return tradeDate?.startsWith(dateStr) || exitDate?.startsWith(dateStr);
+      });
       
       const dayEl = document.createElement('div');
       dayEl.className = 'calendar-day';
@@ -785,22 +857,24 @@ const TradingPlanner = {
     let filteredTrades = [...this.trades];
 
     // Apply filters
-    if (filter === 'futures') filteredTrades = filteredTrades.filter(t => t.mode === 'futures');
+    if (filter === 'futures') filteredTrades = filteredTrades.filter(t => (t.mode || 'futures') === 'futures');
     else if (filter === 'stocks') filteredTrades = filteredTrades.filter(t => t.mode === 'stocks');
-    else if (filter === 'winners') filteredTrades = filteredTrades.filter(t => t.pl > 0);
-    else if (filter === 'losers') filteredTrades = filteredTrades.filter(t => t.pl < 0);
+    else if (filter === 'winners') filteredTrades = filteredTrades.filter(t => parseFloat(t.pl) > 0);
+    else if (filter === 'losers') filteredTrades = filteredTrades.filter(t => parseFloat(t.pl) < 0);
 
     // Date filter
     if (filterDate) {
-      filteredTrades = filteredTrades.filter(t => 
-        t.date?.startsWith(filterDate) || t.exitDate?.startsWith(filterDate)
-      );
+      filteredTrades = filteredTrades.filter(t => {
+        const tradeDate = t.trade_date || t.date;
+        const exitDate = t.exit_date;
+        return tradeDate?.startsWith(filterDate) || exitDate?.startsWith(filterDate);
+      });
     }
 
     // Sort by date (newest first)
     filteredTrades.sort((a, b) => {
-      const dateA = new Date(a.exitDate || a.date);
-      const dateB = new Date(b.exitDate || b.date);
+      const dateA = new Date(a.exit_date || a.trade_date || a.date);
+      const dateB = new Date(b.exit_date || b.trade_date || b.date);
       return dateB - dateA;
     });
 
@@ -813,9 +887,10 @@ const TradingPlanner = {
     }
 
     container.innerHTML = filteredTrades.map(trade => {
-      const plClass = trade.pl >= 0 ? 'profit' : 'loss';
-      const plSign = trade.pl >= 0 ? '+' : '';
-      const date = new Date(trade.exitDate || trade.date);
+      const pl = parseFloat(trade.pl);
+      const plClass = pl >= 0 ? 'profit' : 'loss';
+      const plSign = pl >= 0 ? '+' : '';
+      const date = new Date(trade.exit_date || trade.trade_date || trade.date);
       
       return `
         <div class="trade-journal-item ${plClass}">
@@ -832,23 +907,23 @@ const TradingPlanner = {
             </div>
             <div style="margin-bottom: 0.5rem;">
               <span style="color: #888;">Entry:</span> 
-              <span style="color: #00ff00;">$${trade.entryPrice.toFixed(2)}</span>
+              <span style="color: #00ff00;">$${parseFloat(trade.entry_price).toFixed(2)}</span>
               <span style="color: #888;"> → Exit:</span> 
-              <span style="color: #00ff00;">$${trade.exitPrice.toFixed(2)}</span>
+              <span style="color: #00ff00;">$${parseFloat(trade.exit_price).toFixed(2)}</span>
             </div>
             <div style="margin-bottom: 0.5rem;">
               <span style="color: #888;">Size:</span> 
               <span style="color: #00ff00;">${trade.contracts || trade.shares} ${trade.contracts ? 'contracts' : 'shares'}</span>
             </div>
-            ${trade.setupType ? `<div style="margin-bottom: 0.5rem;"><span style="color: #888;">Setup:</span> <span style="color: #00ff00;">${trade.setupType}</span></div>` : ''}
+            ${trade.setup_type ? `<div style="margin-bottom: 0.5rem;"><span style="color: #888;">Setup:</span> <span style="color: #00ff00;">${trade.setup_type}</span></div>` : ''}
             ${trade.notes ? `<div style="margin-top: 0.5rem; color: #888; font-size: 0.875rem;">${trade.notes}</div>` : ''}
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 1.5rem; font-weight: bold; color: ${trade.pl >= 0 ? '#00ff00' : '#ff4444'};">
-              ${plSign}$${trade.pl.toFixed(2)}
+            <div style="font-size: 1.5rem; font-weight: bold; color: ${parseFloat(trade.pl) >= 0 ? '#00ff00' : '#ff4444'};">
+              ${plSign}$${parseFloat(trade.pl).toFixed(2)}
             </div>
             <div style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
-              ${((trade.pl / (trade.entryPrice * (trade.contracts || trade.shares))) * 100).toFixed(2)}%
+              ${((parseFloat(trade.pl) / (parseFloat(trade.entry_price) * (trade.contracts || trade.shares))) * 100).toFixed(2)}%
             </div>
           </div>
         </div>
@@ -875,10 +950,10 @@ const TradingPlanner = {
       <div class="planned-trade-item">
         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
           <strong style="color: #00ff00;">${trade.symbol}</strong>
-          <button class="btn-terminal btn-sm" onclick="TradingPlanner.removePlannedTrade('${trade.id}')">REMOVE</button>
+          <button class="btn-terminal btn-sm" onclick="TradingPlanner.removePlannedTrade(${trade.id})">REMOVE</button>
         </div>
         <div style="color: #888; font-size: 0.875rem;">
-          ${trade.direction.toUpperCase()} | Entry: $${trade.entryPrice} | Stop: $${trade.stopLoss} | Target: $${trade.target}
+          ${trade.direction.toUpperCase()} | Entry: $${parseFloat(trade.entry_price).toFixed(2)} | Stop: $${trade.stop_loss ? parseFloat(trade.stop_loss).toFixed(2) : 'N/A'} | Target: $${trade.target ? parseFloat(trade.target).toFixed(2) : 'N/A'}
         </div>
         ${trade.notes ? `<div style="color: #888; font-size: 0.875rem; margin-top: 0.5rem;">${trade.notes}</div>` : ''}
       </div>
@@ -897,8 +972,8 @@ const TradingPlanner = {
     list.innerHTML = this.keyLevels.map(level => `
       <div class="key-level-item">
         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-          <strong style="color: #00ff00;">${level.symbol} - $${level.price}</strong>
-          <button class="btn-terminal btn-sm" onclick="TradingPlanner.removeKeyLevel('${level.id}')">REMOVE</button>
+          <strong style="color: #00ff00;">${level.symbol} - $${parseFloat(level.price).toFixed(2)}</strong>
+          <button class="btn-terminal btn-sm" onclick="TradingPlanner.removeKeyLevel(${level.id})">REMOVE</button>
         </div>
         <div style="color: #888; font-size: 0.875rem;">
           ${level.type.toUpperCase()} | ${level.notes || ''}
@@ -907,7 +982,7 @@ const TradingPlanner = {
     `).join('');
   },
 
-  addPlannedTrade() {
+  async addPlannedTrade() {
     const symbol = prompt('Symbol:');
     if (!symbol) return;
     
@@ -919,28 +994,35 @@ const TradingPlanner = {
     const target = parseFloat(prompt('Target:') || '0') || null;
     const notes = prompt('Notes:') || '';
 
-    this.plannedTrades.push({
-      id: Date.now().toString(),
-      symbol: symbol.toUpperCase(),
-      direction: direction.toLowerCase(),
-      entryPrice,
-      stopLoss,
-      target,
-      notes,
-      date: new Date().toISOString()
-    });
-
-    this.saveAllData();
-    this.renderPlannedTrades();
+    try {
+      const created = await window.API.createPlannedTrade({
+        symbol: symbol.toUpperCase(),
+        direction: direction.toLowerCase(),
+        entryPrice,
+        stopLoss,
+        target,
+        notes
+      });
+      this.plannedTrades.push(created);
+      this.renderPlannedTrades();
+    } catch (error) {
+      console.error('Error creating planned trade:', error);
+      alert('Failed to create planned trade.');
+    }
   },
 
-  removePlannedTrade(id) {
-    this.plannedTrades = this.plannedTrades.filter(t => t.id !== id);
-    this.saveAllData();
-    this.renderPlannedTrades();
+  async removePlannedTrade(id) {
+    try {
+      await window.API.deletePlannedTrade(id);
+      this.plannedTrades = this.plannedTrades.filter(t => t.id !== id);
+      this.renderPlannedTrades();
+    } catch (error) {
+      console.error('Error deleting planned trade:', error);
+      alert('Failed to delete planned trade.');
+    }
   },
 
-  addKeyLevel() {
+  async addKeyLevel() {
     const symbol = prompt('Symbol:');
     if (!symbol) return;
     
@@ -950,23 +1032,30 @@ const TradingPlanner = {
     const type = prompt('Type (support/resistance):') || 'support';
     const notes = prompt('Notes:') || '';
 
-    this.keyLevels.push({
-      id: Date.now().toString(),
-      symbol: symbol.toUpperCase(),
-      price,
-      type: type.toLowerCase(),
-      notes,
-      date: new Date().toISOString()
-    });
-
-    this.saveAllData();
-    this.renderKeyLevels();
+    try {
+      const created = await window.API.createKeyLevel({
+        symbol: symbol.toUpperCase(),
+        price,
+        type: type.toLowerCase(),
+        notes
+      });
+      this.keyLevels.push(created);
+      this.renderKeyLevels();
+    } catch (error) {
+      console.error('Error creating key level:', error);
+      alert('Failed to create key level.');
+    }
   },
 
-  removeKeyLevel(id) {
-    this.keyLevels = this.keyLevels.filter(l => l.id !== id);
-    this.saveAllData();
-    this.renderKeyLevels();
+  async removeKeyLevel(id) {
+    try {
+      await window.API.deleteKeyLevel(id);
+      this.keyLevels = this.keyLevels.filter(l => l.id !== id);
+      this.renderKeyLevels();
+    } catch (error) {
+      console.error('Error deleting key level:', error);
+      alert('Failed to delete key level.');
+    }
   },
 
   // ===== ANALYTICS =====
@@ -987,21 +1076,27 @@ const TradingPlanner = {
       return;
     }
 
-    const totalPL = this.trades.reduce((sum, t) => sum + t.pl, 0);
-    const winners = this.trades.filter(t => t.pl > 0);
-    const losers = this.trades.filter(t => t.pl < 0);
+    const totalPL = this.trades.reduce((sum, t) => sum + parseFloat(t.pl || 0), 0);
+    const winners = this.trades.filter(t => parseFloat(t.pl || 0) > 0);
+    const losers = this.trades.filter(t => parseFloat(t.pl || 0) < 0);
     const winRate = (winners.length / this.trades.length) * 100;
-    const avgWin = winners.length > 0 ? winners.reduce((sum, t) => sum + t.pl, 0) / winners.length : 0;
-    const avgLoss = losers.length > 0 ? Math.abs(losers.reduce((sum, t) => sum + t.pl, 0) / losers.length) : 0;
-    const profitFactor = avgLoss > 0 ? (winners.reduce((sum, t) => sum + t.pl, 0) / losers.reduce((sum, t) => sum + Math.abs(t.pl), 0)) : 0;
+    const avgWin = winners.length > 0 ? winners.reduce((sum, t) => sum + parseFloat(t.pl || 0), 0) / winners.length : 0;
+    const avgLoss = losers.length > 0 ? Math.abs(losers.reduce((sum, t) => sum + parseFloat(t.pl || 0), 0) / losers.length) : 0;
+    const totalWins = winners.reduce((sum, t) => sum + parseFloat(t.pl || 0), 0);
+    const totalLosses = Math.abs(losers.reduce((sum, t) => sum + parseFloat(t.pl || 0), 0));
+    const profitFactor = totalLosses > 0 ? totalWins / totalLosses : 0;
 
     // Calculate max drawdown
     let maxDD = 0;
     let peak = 0;
     let runningPL = 0;
-    this.trades.sort((a, b) => new Date(a.exitDate || a.date) - new Date(b.exitDate || b.date));
-    this.trades.forEach(trade => {
-      runningPL += trade.pl;
+    const sortedTrades = [...this.trades].sort((a, b) => {
+      const dateA = new Date(a.exit_date || a.trade_date || a.date);
+      const dateB = new Date(b.exit_date || b.trade_date || b.date);
+      return dateA - dateB;
+    });
+    sortedTrades.forEach(trade => {
+      runningPL += parseFloat(trade.pl || 0);
       if (runningPL > peak) peak = runningPL;
       const drawdown = peak - runningPL;
       if (drawdown > maxDD) maxDD = drawdown;
@@ -1025,14 +1120,16 @@ const TradingPlanner = {
     canvas.height = 300;
 
     // Sort trades by date
-    const sortedTrades = [...this.trades].sort((a, b) => 
-      new Date(a.exitDate || a.date) - new Date(b.exitDate || b.date)
-    );
+    const sortedTrades = [...this.trades].sort((a, b) => {
+      const dateA = new Date(a.exit_date || a.trade_date || a.date);
+      const dateB = new Date(b.exit_date || b.trade_date || b.date);
+      return dateA - dateB;
+    });
 
     // Calculate equity curve
     let runningPL = 0;
     const equityPoints = sortedTrades.map(trade => {
-      runningPL += trade.pl;
+      runningPL += parseFloat(trade.pl || 0);
       return runningPL;
     });
 
@@ -1092,13 +1189,14 @@ const TradingPlanner = {
     // Setup performance
     const setupStats = {};
     this.trades.forEach(trade => {
-      const setup = trade.setupType || 'Other';
+      const setup = trade.setup_type || 'Other';
+      const pl = parseFloat(trade.pl || 0);
       if (!setupStats[setup]) {
         setupStats[setup] = { count: 0, totalPL: 0, wins: 0 };
       }
       setupStats[setup].count++;
-      setupStats[setup].totalPL += trade.pl;
-      if (trade.pl > 0) setupStats[setup].wins++;
+      setupStats[setup].totalPL += pl;
+      if (pl > 0) setupStats[setup].wins++;
     });
 
     const setupTable = document.getElementById('setupPerformanceTable');
@@ -1131,12 +1229,13 @@ const TradingPlanner = {
     const symbolStats = {};
     this.trades.forEach(trade => {
       const symbol = trade.symbol;
+      const pl = parseFloat(trade.pl || 0);
       if (!symbolStats[symbol]) {
         symbolStats[symbol] = { count: 0, totalPL: 0, wins: 0 };
       }
       symbolStats[symbol].count++;
-      symbolStats[symbol].totalPL += trade.pl;
-      if (trade.pl > 0) symbolStats[symbol].wins++;
+      symbolStats[symbol].totalPL += pl;
+      if (pl > 0) symbolStats[symbol].wins++;
     });
 
     const symbolTable = document.getElementById('symbolPerformanceTable');
@@ -1178,6 +1277,11 @@ const TradingPlanner = {
       const checkbox = document.getElementById(`stage${stages.indexOf(stage) + 1}`);
       if (checkbox) {
         checkbox.checked = this.executionStages[stage] || false;
+        checkbox.addEventListener('change', async (e) => {
+          const stage = e.target.dataset.stage;
+          this.executionStages[stage] = e.target.checked;
+          await window.API.saveExecutionStages(this.executionStages);
+        });
       }
     });
   },
@@ -1192,7 +1296,7 @@ const TradingPlanner = {
     }
 
     container.innerHTML = this.psychology.slice(-10).reverse().map(entry => {
-      const date = new Date(entry.date);
+      const date = new Date(entry.date || entry.created_at);
       return `
         <div class="psychology-entry">
           <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
@@ -1205,22 +1309,21 @@ const TradingPlanner = {
     }).join('');
   },
 
-  savePsychology() {
+  async savePsychology() {
     const state = document.getElementById('emotionalState').value;
     const notes = document.getElementById('psychologyNotes').value;
 
     if (!state) return;
 
-    this.psychology.push({
-      id: Date.now().toString(),
-      state,
-      notes,
-      date: new Date().toISOString()
-    });
-
-    this.saveAllData();
-    document.getElementById('psychologyNotes').value = '';
-    this.renderPsychology();
+    try {
+      const created = await window.API.createPsychologyEntry({ state, notes });
+      this.psychology.push(created);
+      document.getElementById('psychologyNotes').value = '';
+      this.renderPsychology();
+    } catch (error) {
+      console.error('Error saving psychology entry:', error);
+      alert('Failed to save psychology entry.');
+    }
   },
 
   // ===== TRADINGVIEW =====
@@ -1272,8 +1375,16 @@ const TradingPlanner = {
 };
 
 // Initialize on DOM load
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const savedTheme = localStorage.getItem('hubTheme') || 'cosmic';
   document.body.setAttribute('data-theme', savedTheme);
-  TradingPlanner.init();
+  
+  // Check if user is authenticated
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    window.location.href = '../../login.html';
+    return;
+  }
+  
+  await TradingPlanner.init();
 });
