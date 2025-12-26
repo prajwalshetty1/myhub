@@ -455,8 +455,8 @@ router.get('/daily-notes', async (req, res) => {
 router.get('/daily-notes/:date', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trading_daily_notes AND date = $1',
-      [null, req.params.date]
+      'SELECT * FROM trading_daily_notes WHERE user_id IS NULL AND date = $1',
+      [req.params.date]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Daily note not found' });
