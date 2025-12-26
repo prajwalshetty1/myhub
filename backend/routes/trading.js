@@ -8,8 +8,7 @@ const pool = require('../config/database');
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trades ORDER BY COALESCE(exit_date, trade_date) DESC',
-      []
+      'SELECT * FROM trades WHERE user_id IS NULL ORDER BY COALESCE(exit_date, trade_date) DESC'
     );
     res.json(result.rows);
   } catch (error) {
@@ -95,8 +94,7 @@ router.delete('/:id', async (req, res) => {
 router.get('/positions', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trading_positions ORDER BY entry_date DESC',
-      []
+      'SELECT * FROM trading_positions WHERE user_id IS NULL ORDER BY entry_date DESC'
     );
     res.json(result.rows);
   } catch (error) {
@@ -165,8 +163,7 @@ router.delete('/positions/:id', async (req, res) => {
 router.get('/settings', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trading_settings',
-      []
+      'SELECT * FROM trading_settings WHERE user_id IS NULL'
     );
     if (result.rows.length === 0) {
       // Return defaults
