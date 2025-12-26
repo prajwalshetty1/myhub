@@ -4,18 +4,23 @@
 function getApiBaseUrl() {
   // Check for injected API URL from HTML script tag (Vercel will replace {{VITE_API_URL}})
   if (typeof window !== 'undefined' && window.VITE_API_URL && window.VITE_API_URL !== '{{VITE_API_URL}}') {
+    console.log('Using injected API URL:', window.VITE_API_URL);
     return window.VITE_API_URL;
   }
   
   // Development: use localhost
   if (typeof window !== 'undefined' && 
       (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-    return 'http://localhost:3000/api';
+    const port = window.location.port || '8000';
+    const apiUrl = `http://localhost:3000/api`;
+    console.log('Using development API URL:', apiUrl);
+    return apiUrl;
   }
   
   // Production: use relative path (backend should be on same domain or use proxy)
   // For separate backend deployment, set VITE_API_URL in Vercel environment variables
   // and it will be injected via the script tag in index.html
+  console.log('Using production API URL: /api');
   return '/api';
 }
 
@@ -56,6 +61,7 @@ class APIClient {
     };
 
     try {
+      console.log('Making API request to:', url, config);
       const response = await fetch(url, config);
       
       // Check if response has content
@@ -65,10 +71,24 @@ class APIClient {
         data = await response.json();
       } else {
         const text = await response.text();
-        try {
-          data = JSON.parse(text);
-        } catch {
-          throw new Error(text || 'Request failed');
+        if (text) {
+          try {
+            data = JSON.parse(text);
+          } catch {
+            // If it's not JSON and not empty, use the text as error
+            if (response.ok) {
+              data = { message: text };
+            } else {
+              throw new Error(text || 'Request failed');
+            }
+          }
+        } else {
+          // Empty response
+          if (response.ok) {
+            data = {};
+          } else {
+            throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+          }
         }
       }
 
@@ -82,12 +102,21 @@ class APIClient {
           }
           throw new Error('Authentication required');
         }
-        throw new Error(data.error || `Request failed: ${response.status} ${response.statusText}`);
+        const errorMsg = data.error || data.message || `Request failed: ${response.status} ${response.statusText}`;
+        throw new Error(errorMsg);
       }
 
       return data;
     } catch (error) {
       console.error('API request failed:', error);
+      console.error('URL:', url);
+      console.error('Config:', config);
+      
+      // Handle network errors
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        throw new Error('Cannot connect to server. Please check if the backend is running and the API URL is correct.');
+      }
+      
       // Re-throw with better error message
       if (error.message) {
         throw error;

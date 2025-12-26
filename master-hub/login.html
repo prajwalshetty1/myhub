@@ -210,7 +210,25 @@
         }
       } catch (error) {
         console.error('Auth error:', error);
-        errorEl.textContent = error.message || 'Authentication failed. Please try again.';
+        console.error('Error details:', {
+          message: error.message,
+          name: error.name,
+          stack: error.stack
+        });
+        
+        // Show detailed error message
+        let errorMessage = error.message || 'Authentication failed. Please try again.';
+        
+        // Provide helpful hints based on error type
+        if (errorMessage.includes('Cannot connect') || errorMessage.includes('fetch')) {
+          errorMessage = 'Cannot connect to server. Please ensure the backend is running on http://localhost:3000';
+        } else if (errorMessage.includes('Network error')) {
+          errorMessage = 'Network error. Please check your internet connection and try again.';
+        } else if (errorMessage.includes('CORS')) {
+          errorMessage = 'CORS error. Please check backend CORS configuration.';
+        }
+        
+        errorEl.textContent = errorMessage;
         errorEl.style.display = 'block';
         
         // Re-enable button
