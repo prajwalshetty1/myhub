@@ -1,9 +1,25 @@
 // API Client for MyHub Frontend
 
-// Use environment variable for API URL (set in Vercel) or fallback to localhost for development
-const API_BASE_URL = import.meta.env?.VITE_API_URL || 
-                     window.VITE_API_URL || 
-                     (window.location.hostname === 'localhost' ? 'http://localhost:3000/api' : '/api');
+// Determine API URL based on environment
+function getApiBaseUrl() {
+  // Check for injected API URL from HTML script tag (Vercel will replace {{VITE_API_URL}})
+  if (typeof window !== 'undefined' && window.VITE_API_URL && window.VITE_API_URL !== '{{VITE_API_URL}}') {
+    return window.VITE_API_URL;
+  }
+  
+  // Development: use localhost
+  if (typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return 'http://localhost:3000/api';
+  }
+  
+  // Production: use relative path (backend should be on same domain or use proxy)
+  // For separate backend deployment, set VITE_API_URL in Vercel environment variables
+  // and it will be injected via the script tag in index.html
+  return '/api';
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 class APIClient {
   constructor() {
