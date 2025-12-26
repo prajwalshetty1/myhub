@@ -370,26 +370,17 @@ const AdvancedJournal = {
       let saved;
       if (client.saveJournalEntry) {
         // Supabase direct client
-        saved = await client.saveJournalEntry(
-          entryData.date,
-          entryData.title,
-          entryData.content,
-          entryData.mood,
-          entryData.tags
-        );
-        // Update is_favorite separately if needed
-        if (this.currentEntry && this.currentEntry.is_favorite !== is_favorite) {
-          await client.request('journal_entries', 'PATCH', 
-            { is_favorite }, 
-            `user_id=is.null&date=eq.${this.selectedDate}`
-          );
-        }
-      } else {
+        console.log('📡 Using Supabase Direct Client');
+        saved = await client.saveJournalEntry(entryData);
+      } else if (window.API && window.API.request) {
         // Backend API client
-        saved = await client.request('/journal', {
+        console.log('📡 Using Backend API Client');
+        saved = await window.API.request('/journal', {
           method: 'POST',
           body: JSON.stringify(entryData)
         });
+      } else {
+        throw new Error('No API client available');
       }
 
       console.log('✅ Entry saved:', saved);
