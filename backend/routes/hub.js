@@ -2,14 +2,12 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
-const { authenticateToken } = require('../middleware/auth');
-
 // Get habits
-router.get('/habits', authenticateToken, async (req, res) => {
+router.get('/habits', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT habits_data FROM hub_habits WHERE user_id = $1',
-      [req.user.userId]
+      'SELECT habits_data FROM hub_habits',
+      [null]
     );
     res.json((result.rows[0] && result.rows[0].habits_data) || []);
   } catch (error) {
@@ -19,14 +17,14 @@ router.get('/habits', authenticateToken, async (req, res) => {
 });
 
 // Save habits
-router.post('/habits', authenticateToken, async (req, res) => {
+router.post('/habits', async (req, res) => {
   try {
     const { habits } = req.body;
     await pool.query(
-      `INSERT INTO hub_habits (user_id, habits_data)
-       VALUES ($1, $2)
-       ON CONFLICT (user_id) DO UPDATE SET habits_data = $2, updated_at = CURRENT_TIMESTAMP`,
-      [req.user.userId, JSON.stringify(habits)]
+      `INSERT INTO hub_habits (habits_data)
+       VALUES ($1)
+       ON CONFLICT () DO UPDATE SET habits_data = $1, updated_at = CURRENT_TIMESTAMP`,
+      [null, JSON.stringify(habits)]
     );
     res.json({ success: true });
   } catch (error) {
@@ -36,11 +34,11 @@ router.post('/habits', authenticateToken, async (req, res) => {
 });
 
 // Get habit logs for date
-router.get('/habit-logs/:date', authenticateToken, async (req, res) => {
+router.get('/habit-logs/:date', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT habit_logs FROM hub_habit_logs WHERE user_id = $1 AND date = $2',
-      [req.user.userId, req.params.date]
+      'SELECT habit_logs FROM hub_habit_logs AND date = $1',
+      [null, req.params.date]
     );
     res.json((result.rows[0] && result.rows[0].habit_logs) || {});
   } catch (error) {
@@ -50,14 +48,14 @@ router.get('/habit-logs/:date', authenticateToken, async (req, res) => {
 });
 
 // Save habit logs
-router.post('/habit-logs/:date', authenticateToken, async (req, res) => {
+router.post('/habit-logs/:date', async (req, res) => {
   try {
     const { habitLogs } = req.body;
     await pool.query(
-      `INSERT INTO hub_habit_logs (user_id, date, habit_logs)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (user_id, date) DO UPDATE SET habit_logs = $3`,
-      [req.user.userId, req.params.date, JSON.stringify(habitLogs)]
+      `INSERT INTO hub_habit_logs (date, habit_logs)
+       VALUES ($1, $2)
+       ON CONFLICT (date) DO UPDATE SET habit_logs = $2`,
+      [null, req.params.date, JSON.stringify(habitLogs)]
     );
     res.json({ success: true });
   } catch (error) {
@@ -67,11 +65,11 @@ router.post('/habit-logs/:date', authenticateToken, async (req, res) => {
 });
 
 // Get intentions for date
-router.get('/intentions/:date', authenticateToken, async (req, res) => {
+router.get('/intentions/:date', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT intentions_data FROM hub_intentions WHERE user_id = $1 AND date = $2',
-      [req.user.userId, req.params.date]
+      'SELECT intentions_data FROM hub_intentions AND date = $1',
+      [null, req.params.date]
     );
     res.json((result.rows[0] && result.rows[0].intentions_data) || {});
   } catch (error) {
@@ -81,14 +79,14 @@ router.get('/intentions/:date', authenticateToken, async (req, res) => {
 });
 
 // Save intentions
-router.post('/intentions/:date', authenticateToken, async (req, res) => {
+router.post('/intentions/:date', async (req, res) => {
   try {
     const { intentions } = req.body;
     await pool.query(
-      `INSERT INTO hub_intentions (user_id, date, intentions_data)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (user_id, date) DO UPDATE SET intentions_data = $3`,
-      [req.user.userId, req.params.date, JSON.stringify(intentions)]
+      `INSERT INTO hub_intentions (date, intentions_data)
+       VALUES ($1, $2)
+       ON CONFLICT (date) DO UPDATE SET intentions_data = $2`,
+      [null, req.params.date, JSON.stringify(intentions)]
     );
     res.json({ success: true });
   } catch (error) {
@@ -98,17 +96,17 @@ router.post('/intentions/:date', authenticateToken, async (req, res) => {
 });
 
 // Get gamification data
-router.get('/gamification', authenticateToken, async (req, res) => {
+router.get('/gamification', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT total_xp, weekly_xp, level, achievements, streaks FROM hub_gamification WHERE user_id = $1',
-      [req.user.userId]
+      'SELECT total_xp, weekly_xp, level, achievements, streaks FROM hub_gamification',
+      [null]
     );
     if (result.rows.length === 0) {
       // Create default gamification entry
       await pool.query(
-        'INSERT INTO hub_gamification (user_id) VALUES ($1)',
-        [req.user.userId]
+        'INSERT INTO hub_gamification () VALUES ($1)',
+        [null]
       );
       return res.json({ totalXP: 0, weeklyXP: 0, level: 1, achievements: [], streaks: {} });
     }
@@ -127,15 +125,15 @@ router.get('/gamification', authenticateToken, async (req, res) => {
 });
 
 // Update gamification
-router.post('/gamification', authenticateToken, async (req, res) => {
+router.post('/gamification', async (req, res) => {
   try {
     const { totalXP, weeklyXP, level, achievements, streaks } = req.body;
     await pool.query(
-      `INSERT INTO hub_gamification (user_id, total_xp, weekly_xp, level, achievements, streaks)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (user_id) DO UPDATE SET
-         total_xp = $2, weekly_xp = $3, level = $4, achievements = $5, streaks = $6, updated_at = CURRENT_TIMESTAMP`,
-      [req.user.userId, totalXP, weeklyXP, level, JSON.stringify(achievements), JSON.stringify(streaks)]
+      `INSERT INTO hub_gamification (total_xp, weekly_xp, level, achievements, streaks)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT () DO UPDATE SET
+         total_xp = $1, weekly_xp = $2, level = $3, achievements = $4, streaks = $5, updated_at = CURRENT_TIMESTAMP`,
+      [null, totalXP, weeklyXP, level, JSON.stringify(achievements), JSON.stringify(streaks)]
     );
     res.json({ success: true });
   } catch (error) {
@@ -145,15 +143,14 @@ router.post('/gamification', authenticateToken, async (req, res) => {
 });
 
 // Get activity log
-router.get('/activity-log', authenticateToken, async (req, res) => {
+router.get('/activity-log', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
     const result = await pool.query(
       `SELECT timestamp, action, details FROM hub_activity_log
-       WHERE user_id = $1
        ORDER BY timestamp DESC
-       LIMIT $2`,
-      [req.user.userId, limit]
+       LIMIT $1`,
+      [null, limit]
     );
     res.json(result.rows);
   } catch (error) {
@@ -163,12 +160,12 @@ router.get('/activity-log', authenticateToken, async (req, res) => {
 });
 
 // Log activity
-router.post('/activity-log', authenticateToken, async (req, res) => {
+router.post('/activity-log', async (req, res) => {
   try {
     const { action, details } = req.body;
     await pool.query(
-      'INSERT INTO hub_activity_log (user_id, action, details) VALUES ($1, $2, $3)',
-      [req.user.userId, action, JSON.stringify(details || {})]
+      'INSERT INTO hub_activity_log (action, details) VALUES ($1, $2)',
+      [null, action, JSON.stringify(details || {})]
     );
     res.json({ success: true });
   } catch (error) {

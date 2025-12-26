@@ -1657,11 +1657,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.body.setAttribute('data-theme', savedTheme);
   
   // Check if user is authenticated
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    window.location.href = '../../login.html';
-    return;
-  }
+  // No authentication required
   
   await TradingPlanner.init();
 });

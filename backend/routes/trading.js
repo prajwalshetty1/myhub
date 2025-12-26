@@ -1,16 +1,15 @@
-// Trading Planner Routes - Complete Implementation
+// Trading Planner Routes - Complete Implementation (Unauthenticated)
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
-const { authenticateToken } = require('../middleware/auth');
 
 // ===== TRADES =====
 // Get all trades
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trades WHERE user_id = $1 ORDER BY COALESCE(exit_date, trade_date) DESC',
-      [req.user.userId]
+      'SELECT * FROM trades ORDER BY COALESCE(exit_date, trade_date) DESC',
+      [null]
     );
     res.json(result.rows);
   } catch (error) {
@@ -20,11 +19,11 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Get trade by ID
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trades WHERE id = $1 AND user_id = $2',
-      [req.params.id, req.user.userId]
+      'SELECT * FROM trades WHERE id = $1 ',
+      [req.params.id, null]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Trade not found' });
@@ -37,14 +36,14 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // Create trade
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { symbol, entryPrice, exitPrice, contracts, shares, direction, setupType, notes, pl, exitReason, exitDate, mode } = req.body;
     const result = await pool.query(
-      `INSERT INTO trades (user_id, symbol, entry_price, exit_price, contracts, shares, direction, setup_type, notes, pl, exit_reason, exit_date, mode, trade_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      `INSERT INTO trades (symbol, entry_price, exit_price, contracts, shares, direction, setup_type, notes, pl, exit_reason, exit_date, mode, trade_date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
-      [req.user.userId, symbol, entryPrice, exitPrice, contracts || null, shares || null, direction, setupType || null, notes || null, pl, exitReason || null, exitDate || null, mode || 'futures', new Date()]
+      [null, symbol, entryPrice, exitPrice, contracts || null, shares || null, direction, setupType || null, notes || null, pl, exitReason || null, exitDate || null, mode || 'futures', new Date()]
     );
     res.json(result.rows[0]);
   } catch (error) {
@@ -54,15 +53,15 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // Update trade
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const { symbol, entryPrice, exitPrice, contracts, shares, direction, setupType, notes, pl, exitReason, exitDate, mode } = req.body;
     const result = await pool.query(
       `UPDATE trades
-       SET symbol = $1, entry_price = $2, exit_price = $3, contracts = $4, shares = $5, direction = $6, setup_type = $7, notes = $8, pl = $9, exit_reason = $10, exit_date = $11, mode = $12
-       WHERE id = $13 AND user_id = $14
+       SET symbol = $1, entry_price = $1, exit_price = $2, contracts = $3, shares = $4, direction = $5, setup_type = $6, notes = $7, pl = $8, exit_reason = $9, exit_date = $10, mode = $11
+       WHERE id = $12 
        RETURNING *`,
-      [symbol, entryPrice, exitPrice, contracts || null, shares || null, direction, setupType || null, notes || null, pl, exitReason || null, exitDate || null, mode || 'futures', req.params.id, req.user.userId]
+      [symbol, entryPrice, exitPrice, contracts || null, shares || null, direction, setupType || null, notes || null, pl, exitReason || null, exitDate || null, mode || 'futures', req.params.id, null]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Trade not found' });
@@ -75,11 +74,11 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 // Delete trade
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const result = await pool.query(
-      'DELETE FROM trades WHERE id = $1 AND user_id = $2 RETURNING id',
-      [req.params.id, req.user.userId]
+      'DELETE FROM trades WHERE id = $1  RETURNING id',
+      [req.params.id, null]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Trade not found' });
@@ -93,11 +92,11 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
 // ===== POSITIONS =====
 // Get all positions
-router.get('/positions', authenticateToken, async (req, res) => {
+router.get('/positions', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trading_positions WHERE user_id = $1 ORDER BY entry_date DESC',
-      [req.user.userId]
+      'SELECT * FROM trading_positions ORDER BY entry_date DESC',
+      [null]
     );
     res.json(result.rows);
   } catch (error) {
@@ -107,14 +106,14 @@ router.get('/positions', authenticateToken, async (req, res) => {
 });
 
 // Create position
-router.post('/positions', authenticateToken, async (req, res) => {
+router.post('/positions', async (req, res) => {
   try {
     const { symbol, direction, entryPrice, size, stopLoss, takeProfit, currentPrice, setupType, mode } = req.body;
     const result = await pool.query(
-      `INSERT INTO trading_positions (user_id, symbol, direction, entry_price, size, stop_loss, take_profit, current_price, setup_type, mode)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO trading_positions (symbol, direction, entry_price, size, stop_loss, take_profit, current_price, setup_type, mode)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [req.user.userId, symbol, direction, entryPrice, size, stopLoss || null, takeProfit || null, currentPrice || entryPrice, setupType || null, mode || 'futures']
+      [null, symbol, direction, entryPrice, size, stopLoss || null, takeProfit || null, currentPrice || entryPrice, setupType || null, mode || 'futures']
     );
     res.json(result.rows[0]);
   } catch (error) {
@@ -124,15 +123,15 @@ router.post('/positions', authenticateToken, async (req, res) => {
 });
 
 // Update position
-router.put('/positions/:id', authenticateToken, async (req, res) => {
+router.put('/positions/:id', async (req, res) => {
   try {
     const { currentPrice, stopLoss, takeProfit } = req.body;
     const result = await pool.query(
       `UPDATE trading_positions
-       SET current_price = COALESCE($1, current_price), stop_loss = COALESCE($2, stop_loss), take_profit = COALESCE($3, take_profit), updated_at = CURRENT_TIMESTAMP
-       WHERE id = $4 AND user_id = $5
+       SET current_price = COALESCE($1, current_price), stop_loss = COALESCE($1, stop_loss), take_profit = COALESCE($2, take_profit), updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3 
        RETURNING *`,
-      [currentPrice, stopLoss, takeProfit, req.params.id, req.user.userId]
+      [currentPrice, stopLoss, takeProfit, req.params.id, null]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Position not found' });
@@ -145,11 +144,11 @@ router.put('/positions/:id', authenticateToken, async (req, res) => {
 });
 
 // Delete position
-router.delete('/positions/:id', authenticateToken, async (req, res) => {
+router.delete('/positions/:id', async (req, res) => {
   try {
     const result = await pool.query(
-      'DELETE FROM trading_positions WHERE id = $1 AND user_id = $2 RETURNING id',
-      [req.params.id, req.user.userId]
+      'DELETE FROM trading_positions WHERE id = $1  RETURNING id',
+      [req.params.id, null]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Position not found' });
@@ -163,11 +162,11 @@ router.delete('/positions/:id', authenticateToken, async (req, res) => {
 
 // ===== SETTINGS =====
 // Get settings
-router.get('/settings', authenticateToken, async (req, res) => {
+router.get('/settings', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trading_settings WHERE user_id = $1',
-      [req.user.userId]
+      'SELECT * FROM trading_settings',
+      [null]
     );
     if (result.rows.length === 0) {
       // Return defaults
@@ -186,20 +185,20 @@ router.get('/settings', authenticateToken, async (req, res) => {
 });
 
 // Save settings
-router.post('/settings', authenticateToken, async (req, res) => {
+router.post('/settings', async (req, res) => {
   try {
     const { futuresBalance, stocksBalance, dailyLossLimit, maxRiskPerTrade } = req.body;
     const result = await pool.query(
-      `INSERT INTO trading_settings (user_id, futures_balance, stocks_balance, daily_loss_limit, max_risk_per_trade)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (user_id) DO UPDATE SET
-         futures_balance = $2,
-         stocks_balance = $3,
-         daily_loss_limit = $4,
-         max_risk_per_trade = $5,
+      `INSERT INTO trading_settings (futures_balance, stocks_balance, daily_loss_limit, max_risk_per_trade)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT () DO UPDATE SET
+         futures_balance = $1,
+         stocks_balance = $2,
+         daily_loss_limit = $3,
+         max_risk_per_trade = $4,
          updated_at = CURRENT_TIMESTAMP
        RETURNING *`,
-      [req.user.userId, futuresBalance, stocksBalance, dailyLossLimit, maxRiskPerTrade]
+      [null, futuresBalance, stocksBalance, dailyLossLimit, maxRiskPerTrade]
     );
     res.json(result.rows[0]);
   } catch (error) {
@@ -210,11 +209,11 @@ router.post('/settings', authenticateToken, async (req, res) => {
 
 // ===== MODE =====
 // Get trading mode
-router.get('/mode', authenticateToken, async (req, res) => {
+router.get('/mode', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT mode FROM trading_mode WHERE user_id = $1',
-      [req.user.userId]
+      'SELECT mode FROM trading_mode',
+      [null]
     );
     res.json({ mode: (result.rows[0] && result.rows[0].mode) || 'futures' });
   } catch (error) {
@@ -224,14 +223,14 @@ router.get('/mode', authenticateToken, async (req, res) => {
 });
 
 // Save trading mode
-router.post('/mode', authenticateToken, async (req, res) => {
+router.post('/mode', async (req, res) => {
   try {
     const { mode } = req.body;
     await pool.query(
-      `INSERT INTO trading_mode (user_id, mode)
-       VALUES ($1, $2)
-       ON CONFLICT (user_id) DO UPDATE SET mode = $2`,
-      [req.user.userId, mode]
+      `INSERT INTO trading_mode (mode)
+       VALUES ($1)
+       ON CONFLICT () DO UPDATE SET mode = $1`,
+      [null, mode]
     );
     res.json({ success: true });
   } catch (error) {
@@ -242,11 +241,11 @@ router.post('/mode', authenticateToken, async (req, res) => {
 
 // ===== PLANNED TRADES =====
 // Get planned trades
-router.get('/planned-trades', authenticateToken, async (req, res) => {
+router.get('/planned-trades', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trading_planned_trades WHERE user_id = $1 ORDER BY date DESC',
-      [req.user.userId]
+      'SELECT * FROM trading_planned_trades ORDER BY date DESC',
+      [null]
     );
     res.json(result.rows);
   } catch (error) {
@@ -256,14 +255,14 @@ router.get('/planned-trades', authenticateToken, async (req, res) => {
 });
 
 // Create planned trade
-router.post('/planned-trades', authenticateToken, async (req, res) => {
+router.post('/planned-trades', async (req, res) => {
   try {
     const { symbol, direction, entryPrice, stopLoss, target, notes } = req.body;
     const result = await pool.query(
-      `INSERT INTO trading_planned_trades (user_id, symbol, direction, entry_price, stop_loss, target, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO trading_planned_trades (symbol, direction, entry_price, stop_loss, target, notes)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [req.user.userId, symbol, direction, entryPrice, stopLoss || null, target || null, notes || null]
+      [null, symbol, direction, entryPrice, stopLoss || null, target || null, notes || null]
     );
     res.json(result.rows[0]);
   } catch (error) {
@@ -273,11 +272,11 @@ router.post('/planned-trades', authenticateToken, async (req, res) => {
 });
 
 // Delete planned trade
-router.delete('/planned-trades/:id', authenticateToken, async (req, res) => {
+router.delete('/planned-trades/:id', async (req, res) => {
   try {
     const result = await pool.query(
-      'DELETE FROM trading_planned_trades WHERE id = $1 AND user_id = $2 RETURNING id',
-      [req.params.id, req.user.userId]
+      'DELETE FROM trading_planned_trades WHERE id = $1  RETURNING id',
+      [req.params.id, null]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Planned trade not found' });
@@ -291,11 +290,11 @@ router.delete('/planned-trades/:id', authenticateToken, async (req, res) => {
 
 // ===== KEY LEVELS =====
 // Get key levels
-router.get('/key-levels', authenticateToken, async (req, res) => {
+router.get('/key-levels', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trading_key_levels WHERE user_id = $1 ORDER BY date DESC',
-      [req.user.userId]
+      'SELECT * FROM trading_key_levels ORDER BY date DESC',
+      [null]
     );
     res.json(result.rows);
   } catch (error) {
@@ -305,14 +304,14 @@ router.get('/key-levels', authenticateToken, async (req, res) => {
 });
 
 // Create key level
-router.post('/key-levels', authenticateToken, async (req, res) => {
+router.post('/key-levels', async (req, res) => {
   try {
     const { symbol, price, type, notes } = req.body;
     const result = await pool.query(
-      `INSERT INTO trading_key_levels (user_id, symbol, price, type, notes)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO trading_key_levels (symbol, price, type, notes)
+       VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [req.user.userId, symbol, price, type, notes || null]
+      [null, symbol, price, type, notes || null]
     );
     res.json(result.rows[0]);
   } catch (error) {
@@ -322,11 +321,11 @@ router.post('/key-levels', authenticateToken, async (req, res) => {
 });
 
 // Delete key level
-router.delete('/key-levels/:id', authenticateToken, async (req, res) => {
+router.delete('/key-levels/:id', async (req, res) => {
   try {
     const result = await pool.query(
-      'DELETE FROM trading_key_levels WHERE id = $1 AND user_id = $2 RETURNING id',
-      [req.params.id, req.user.userId]
+      'DELETE FROM trading_key_levels WHERE id = $1  RETURNING id',
+      [req.params.id, null]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Key level not found' });
@@ -340,11 +339,11 @@ router.delete('/key-levels/:id', authenticateToken, async (req, res) => {
 
 // ===== EXECUTION STAGES =====
 // Get execution stages
-router.get('/execution-stages', authenticateToken, async (req, res) => {
+router.get('/execution-stages', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT stage_data FROM trading_execution_stages WHERE user_id = $1',
-      [req.user.userId]
+      'SELECT stage_data FROM trading_execution_stages',
+      [null]
     );
     res.json({ stages: (result.rows[0] && result.rows[0].stage_data) || {} });
   } catch (error) {
@@ -354,15 +353,15 @@ router.get('/execution-stages', authenticateToken, async (req, res) => {
 });
 
 // Save execution stages
-router.post('/execution-stages', authenticateToken, async (req, res) => {
+router.post('/execution-stages', async (req, res) => {
   try {
     const { stages } = req.body;
     const result = await pool.query(
-      `INSERT INTO trading_execution_stages (user_id, stage_data)
-       VALUES ($1, $2)
-       ON CONFLICT (user_id) DO UPDATE SET stage_data = $2, updated_at = CURRENT_TIMESTAMP
+      `INSERT INTO trading_execution_stages (stage_data)
+       VALUES ($1)
+       ON CONFLICT () DO UPDATE SET stage_data = $1, updated_at = CURRENT_TIMESTAMP
        RETURNING *`,
-      [req.user.userId, JSON.stringify(stages)]
+      [null, JSON.stringify(stages)]
     );
     res.json({ success: true });
   } catch (error) {
@@ -373,11 +372,11 @@ router.post('/execution-stages', authenticateToken, async (req, res) => {
 
 // ===== PSYCHOLOGY =====
 // Get psychology entries
-router.get('/psychology', authenticateToken, async (req, res) => {
+router.get('/psychology', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trading_psychology WHERE user_id = $1 ORDER BY date DESC LIMIT 50',
-      [req.user.userId]
+      'SELECT * FROM trading_psychology ORDER BY date DESC LIMIT 50',
+      [null]
     );
     res.json(result.rows);
   } catch (error) {
@@ -387,14 +386,14 @@ router.get('/psychology', authenticateToken, async (req, res) => {
 });
 
 // Create psychology entry
-router.post('/psychology', authenticateToken, async (req, res) => {
+router.post('/psychology', async (req, res) => {
   try {
     const { state, notes } = req.body;
     const result = await pool.query(
-      `INSERT INTO trading_psychology (user_id, state, notes)
-       VALUES ($1, $2, $3)
+      `INSERT INTO trading_psychology (state, notes)
+       VALUES ($1, $2)
        RETURNING *`,
-      [req.user.userId, state, notes || null]
+      [null, state, notes || null]
     );
     res.json(result.rows[0]);
   } catch (error) {
@@ -405,11 +404,11 @@ router.post('/psychology', authenticateToken, async (req, res) => {
 
 // ===== WATCHLIST =====
 // Get watchlist
-router.get('/watchlist', authenticateToken, async (req, res) => {
+router.get('/watchlist', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT symbols FROM trading_watchlist WHERE user_id = $1',
-      [req.user.userId]
+      'SELECT symbols FROM trading_watchlist',
+      [null]
     );
     res.json({ symbols: (result.rows[0] && result.rows[0].symbols) || [] });
   } catch (error) {
@@ -419,15 +418,15 @@ router.get('/watchlist', authenticateToken, async (req, res) => {
 });
 
 // Save watchlist
-router.post('/watchlist', authenticateToken, async (req, res) => {
+router.post('/watchlist', async (req, res) => {
   try {
     const { symbols } = req.body;
     const result = await pool.query(
-      `INSERT INTO trading_watchlist (user_id, symbols)
-       VALUES ($1, $2)
-       ON CONFLICT (user_id) DO UPDATE SET symbols = $2, updated_at = CURRENT_TIMESTAMP
+      `INSERT INTO trading_watchlist (symbols)
+       VALUES ($1)
+       ON CONFLICT () DO UPDATE SET symbols = $1, updated_at = CURRENT_TIMESTAMP
        RETURNING *`,
-      [req.user.userId, symbols]
+      [null, symbols]
     );
     res.json({ success: true, symbols: result.rows[0].symbols });
   } catch (error) {
@@ -438,11 +437,11 @@ router.post('/watchlist', authenticateToken, async (req, res) => {
 
 // ===== DAILY NOTES =====
 // Get all daily notes
-router.get('/daily-notes', authenticateToken, async (req, res) => {
+router.get('/daily-notes', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trading_daily_notes WHERE user_id = $1 ORDER BY date DESC',
-      [req.user.userId]
+      'SELECT * FROM trading_daily_notes ORDER BY date DESC',
+      [null]
     );
     res.json(result.rows);
   } catch (error) {
@@ -452,11 +451,11 @@ router.get('/daily-notes', authenticateToken, async (req, res) => {
 });
 
 // Get daily note by date
-router.get('/daily-notes/:date', authenticateToken, async (req, res) => {
+router.get('/daily-notes/:date', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trading_daily_notes WHERE user_id = $1 AND date = $2',
-      [req.user.userId, req.params.date]
+      'SELECT * FROM trading_daily_notes AND date = $1',
+      [null, req.params.date]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Daily note not found' });
@@ -469,7 +468,7 @@ router.get('/daily-notes/:date', authenticateToken, async (req, res) => {
 });
 
 // Create or update daily note
-router.post('/daily-notes', authenticateToken, async (req, res) => {
+router.post('/daily-notes', async (req, res) => {
   try {
     const { date, notes } = req.body;
     
@@ -478,12 +477,12 @@ router.post('/daily-notes', authenticateToken, async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO trading_daily_notes (user_id, date, notes)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (user_id, date)
-       DO UPDATE SET notes = $3, updated_at = CURRENT_TIMESTAMP
+      `INSERT INTO trading_daily_notes (date, notes)
+       VALUES ($1, $2)
+       ON CONFLICT (date)
+       DO UPDATE SET notes = $2, updated_at = CURRENT_TIMESTAMP
        RETURNING *`,
-      [req.user.userId, date, notes || '']
+      [null, date, notes || '']
     );
     
     res.json(result.rows[0]);
@@ -494,11 +493,11 @@ router.post('/daily-notes', authenticateToken, async (req, res) => {
 });
 
 // Delete daily note
-router.delete('/daily-notes/:date', authenticateToken, async (req, res) => {
+router.delete('/daily-notes/:date', async (req, res) => {
   try {
     const result = await pool.query(
-      'DELETE FROM trading_daily_notes WHERE user_id = $1 AND date = $2 RETURNING *',
-      [req.user.userId, req.params.date]
+      'DELETE FROM trading_daily_notes AND date = $1 RETURNING *',
+      [null, req.params.date]
     );
     
     if (result.rows.length === 0) {

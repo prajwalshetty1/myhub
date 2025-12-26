@@ -2,14 +2,12 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
-const { authenticateToken } = require('../middleware/auth');
-
 // Get meals for date
-router.get('/meals/:date', authenticateToken, async (req, res) => {
+router.get('/meals/:date', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT meal_type, meal_data FROM diet_meals WHERE user_id = $1 AND date = $2',
-      [req.user.userId, req.params.date]
+      'SELECT meal_type, meal_data FROM diet_meals AND date = $1',
+      [null, req.params.date]
     );
     
     const meals = { protein: [], one: [] };
@@ -25,14 +23,14 @@ router.get('/meals/:date', authenticateToken, async (req, res) => {
 });
 
 // Save meals
-router.post('/meals/:date', authenticateToken, async (req, res) => {
+router.post('/meals/:date', async (req, res) => {
   try {
     const { mealType, meals } = req.body;
     await pool.query(
-      `INSERT INTO diet_meals (user_id, date, meal_type, meal_data)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (user_id, date, meal_type) DO UPDATE SET meal_data = $4`,
-      [req.user.userId, req.params.date, mealType, JSON.stringify(meals)]
+      `INSERT INTO diet_meals (date, meal_type, meal_data)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (date, meal_type) DO UPDATE SET meal_data = $3`,
+      [null, req.params.date, mealType, JSON.stringify(meals)]
     );
     res.json({ success: true });
   } catch (error) {
@@ -42,11 +40,11 @@ router.post('/meals/:date', authenticateToken, async (req, res) => {
 });
 
 // Get goals
-router.get('/goals', authenticateToken, async (req, res) => {
+router.get('/goals', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT goals_data FROM diet_goals WHERE user_id = $1',
-      [req.user.userId]
+      'SELECT goals_data FROM diet_goals',
+      [null]
     );
     res.json((result.rows[0] && result.rows[0].goals_data) || { calories: 2000, protein: 150, carbs: 200, fat: 65 });
   } catch (error) {
@@ -56,14 +54,14 @@ router.get('/goals', authenticateToken, async (req, res) => {
 });
 
 // Save goals
-router.post('/goals', authenticateToken, async (req, res) => {
+router.post('/goals', async (req, res) => {
   try {
     const { goals } = req.body;
     await pool.query(
-      `INSERT INTO diet_goals (user_id, goals_data)
-       VALUES ($1, $2)
-       ON CONFLICT (user_id) DO UPDATE SET goals_data = $2, updated_at = CURRENT_TIMESTAMP`,
-      [req.user.userId, JSON.stringify(goals)]
+      `INSERT INTO diet_goals (goals_data)
+       VALUES ($1)
+       ON CONFLICT () DO UPDATE SET goals_data = $1, updated_at = CURRENT_TIMESTAMP`,
+      [null, JSON.stringify(goals)]
     );
     res.json({ success: true });
   } catch (error) {
@@ -73,11 +71,11 @@ router.post('/goals', authenticateToken, async (req, res) => {
 });
 
 // Get water for date
-router.get('/water/:date', authenticateToken, async (req, res) => {
+router.get('/water/:date', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT glasses FROM diet_water WHERE user_id = $1 AND date = $2',
-      [req.user.userId, req.params.date]
+      'SELECT glasses FROM diet_water AND date = $1',
+      [null, req.params.date]
     );
     res.json({ water: (result.rows[0] && result.rows[0].glasses) || 0 });
   } catch (error) {
@@ -87,14 +85,14 @@ router.get('/water/:date', authenticateToken, async (req, res) => {
 });
 
 // Save water
-router.post('/water/:date', authenticateToken, async (req, res) => {
+router.post('/water/:date', async (req, res) => {
   try {
     const { water } = req.body;
     await pool.query(
-      `INSERT INTO diet_water (user_id, date, glasses)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (user_id, date) DO UPDATE SET glasses = $3`,
-      [req.user.userId, req.params.date, water]
+      `INSERT INTO diet_water (date, glasses)
+       VALUES ($1, $2)
+       ON CONFLICT (date) DO UPDATE SET glasses = $2`,
+      [null, req.params.date, water]
     );
     res.json({ success: true });
   } catch (error) {
@@ -104,11 +102,11 @@ router.post('/water/:date', authenticateToken, async (req, res) => {
 });
 
 // Get fasting status
-router.get('/fasting', authenticateToken, async (req, res) => {
+router.get('/fasting', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT start_time, is_fasting FROM diet_fasting WHERE user_id = $1',
-      [req.user.userId]
+      'SELECT start_time, is_fasting FROM diet_fasting',
+      [null]
     );
     res.json(result.rows[0] || { startTime: null, isFasting: false });
   } catch (error) {
@@ -118,14 +116,14 @@ router.get('/fasting', authenticateToken, async (req, res) => {
 });
 
 // Save fasting status
-router.post('/fasting', authenticateToken, async (req, res) => {
+router.post('/fasting', async (req, res) => {
   try {
     const { startTime, isFasting } = req.body;
     await pool.query(
-      `INSERT INTO diet_fasting (user_id, start_time, is_fasting)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (user_id) DO UPDATE SET start_time = $2, is_fasting = $3, updated_at = CURRENT_TIMESTAMP`,
-      [req.user.userId, startTime, isFasting]
+      `INSERT INTO diet_fasting (start_time, is_fasting)
+       VALUES ($1, $2)
+       ON CONFLICT () DO UPDATE SET start_time = $1, is_fasting = $2, updated_at = CURRENT_TIMESTAMP`,
+      [null, startTime, isFasting]
     );
     res.json({ success: true });
   } catch (error) {

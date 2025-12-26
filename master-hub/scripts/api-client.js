@@ -28,26 +28,19 @@ const API_BASE_URL = getApiBaseUrl();
 
 class APIClient {
   constructor() {
-    this.token = localStorage.getItem('authToken') || null;
+    // No authentication needed
+    this.token = null;
   }
 
   setToken(token) {
-    this.token = token;
-    if (token) {
-      localStorage.setItem('authToken', token);
-    } else {
-      localStorage.removeItem('authToken');
-    }
+    // No-op: authentication disabled
+    this.token = null;
   }
 
   getHeaders() {
-    const headers = {
+    return {
       'Content-Type': 'application/json'
     };
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
-    }
-    return headers;
   }
 
   async request(endpoint, options = {}) {
@@ -93,15 +86,7 @@ class APIClient {
       }
 
       if (!response.ok) {
-        if (response.status === 401) {
-          // Token expired or invalid
-          this.setToken(null);
-          // Only redirect if not already on login page
-          if (!window.location.pathname.includes('login.html')) {
-            window.location.href = './login.html';
-          }
-          throw new Error('Authentication required');
-        }
+        // No authentication redirects needed
         const errorMsg = data.error || data.message || `Request failed: ${response.status} ${response.statusText}`;
         throw new Error(errorMsg);
       }

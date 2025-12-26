@@ -2,14 +2,12 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
-const { authenticateToken } = require('../middleware/auth');
-
 // Get schedule
-router.get('/schedule', authenticateToken, async (req, res) => {
+router.get('/schedule', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM phoenix_schedule WHERE user_id = $1 ORDER BY time',
-      [req.user.userId]
+      'SELECT * FROM phoenix_schedule ORDER BY time',
+      [null]
     );
     res.json(result.rows);
   } catch (error) {
@@ -19,12 +17,12 @@ router.get('/schedule', authenticateToken, async (req, res) => {
 });
 
 // Add schedule item
-router.post('/schedule', authenticateToken, async (req, res) => {
+router.post('/schedule', async (req, res) => {
   try {
     const { time, title, category, duration } = req.body;
     const result = await pool.query(
-      'INSERT INTO phoenix_schedule (user_id, time, title, category, duration) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [req.user.userId, time, title, category, duration]
+      'INSERT INTO phoenix_schedule (time, title, category, duration) VALUES ($1, $2, $3, $4) RETURNING *',
+      [null, time, title, category, duration]
     );
     res.json(result.rows[0]);
   } catch (error) {
@@ -34,11 +32,11 @@ router.post('/schedule', authenticateToken, async (req, res) => {
 });
 
 // Delete schedule item
-router.delete('/schedule/:id', authenticateToken, async (req, res) => {
+router.delete('/schedule/:id', async (req, res) => {
   try {
     await pool.query(
-      'DELETE FROM phoenix_schedule WHERE id = $1 AND user_id = $2',
-      [req.params.id, req.user.userId]
+      'DELETE FROM phoenix_schedule WHERE id = $1 ',
+      [req.params.id, null]
     );
     res.json({ success: true });
   } catch (error) {
@@ -48,11 +46,11 @@ router.delete('/schedule/:id', authenticateToken, async (req, res) => {
 });
 
 // Get selected tasks for date
-router.get('/selected-tasks/:date', authenticateToken, async (req, res) => {
+router.get('/selected-tasks/:date', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT task_data FROM phoenix_selected_tasks WHERE user_id = $1 AND date = $2',
-      [req.user.userId, req.params.date]
+      'SELECT task_data FROM phoenix_selected_tasks AND date = $1',
+      [null, req.params.date]
     );
     res.json((result.rows[0] && result.rows[0].task_data) || []);
   } catch (error) {
@@ -62,14 +60,14 @@ router.get('/selected-tasks/:date', authenticateToken, async (req, res) => {
 });
 
 // Save selected tasks
-router.post('/selected-tasks/:date', authenticateToken, async (req, res) => {
+router.post('/selected-tasks/:date', async (req, res) => {
   try {
     const { tasks } = req.body;
     await pool.query(
-      `INSERT INTO phoenix_selected_tasks (user_id, date, task_data)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (user_id, date) DO UPDATE SET task_data = $3`,
-      [req.user.userId, req.params.date, JSON.stringify(tasks)]
+      `INSERT INTO phoenix_selected_tasks (date, task_data)
+       VALUES ($1, $2)
+       ON CONFLICT (date) DO UPDATE SET task_data = $2`,
+      [null, req.params.date, JSON.stringify(tasks)]
     );
     res.json({ success: true });
   } catch (error) {
@@ -79,11 +77,11 @@ router.post('/selected-tasks/:date', authenticateToken, async (req, res) => {
 });
 
 // Get completed tasks
-router.get('/completed-tasks/:date', authenticateToken, async (req, res) => {
+router.get('/completed-tasks/:date', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT task_titles FROM phoenix_completed_tasks WHERE user_id = $1 AND date = $2',
-      [req.user.userId, req.params.date]
+      'SELECT task_titles FROM phoenix_completed_tasks AND date = $1',
+      [null, req.params.date]
     );
     res.json((result.rows[0] && result.rows[0].task_titles) || []);
   } catch (error) {
@@ -93,14 +91,14 @@ router.get('/completed-tasks/:date', authenticateToken, async (req, res) => {
 });
 
 // Save completed tasks
-router.post('/completed-tasks/:date', authenticateToken, async (req, res) => {
+router.post('/completed-tasks/:date', async (req, res) => {
   try {
     const { taskTitles } = req.body;
     await pool.query(
-      `INSERT INTO phoenix_completed_tasks (user_id, date, task_titles)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (user_id, date) DO UPDATE SET task_titles = $3`,
-      [req.user.userId, req.params.date, taskTitles]
+      `INSERT INTO phoenix_completed_tasks (date, task_titles)
+       VALUES ($1, $2)
+       ON CONFLICT (date) DO UPDATE SET task_titles = $2`,
+      [null, req.params.date, taskTitles]
     );
     res.json({ success: true });
   } catch (error) {
@@ -110,11 +108,11 @@ router.post('/completed-tasks/:date', authenticateToken, async (req, res) => {
 });
 
 // Get supplements
-router.get('/supplements', authenticateToken, async (req, res) => {
+router.get('/supplements', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT supplement_data FROM phoenix_supplements WHERE user_id = $1',
-      [req.user.userId]
+      'SELECT supplement_data FROM phoenix_supplements',
+      [null]
     );
     res.json((result.rows[0] && result.rows[0].supplement_data) || { morning: [], afternoon: [], evening: [] });
   } catch (error) {
@@ -124,14 +122,14 @@ router.get('/supplements', authenticateToken, async (req, res) => {
 });
 
 // Save supplements
-router.post('/supplements', authenticateToken, async (req, res) => {
+router.post('/supplements', async (req, res) => {
   try {
     const { supplements } = req.body;
     await pool.query(
-      `INSERT INTO phoenix_supplements (user_id, supplement_data)
-       VALUES ($1, $2)
-       ON CONFLICT (user_id) DO UPDATE SET supplement_data = $2, updated_at = CURRENT_TIMESTAMP`,
-      [req.user.userId, JSON.stringify(supplements)]
+      `INSERT INTO phoenix_supplements (supplement_data)
+       VALUES ($1)
+       ON CONFLICT () DO UPDATE SET supplement_data = $1, updated_at = CURRENT_TIMESTAMP`,
+      [null, JSON.stringify(supplements)]
     );
     res.json({ success: true });
   } catch (error) {
@@ -141,11 +139,11 @@ router.post('/supplements', authenticateToken, async (req, res) => {
 });
 
 // Get supplements taken
-router.get('/supplements-taken/:date', authenticateToken, async (req, res) => {
+router.get('/supplements-taken/:date', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT supplements_taken FROM phoenix_supplements_taken WHERE user_id = $1 AND date = $2',
-      [req.user.userId, req.params.date]
+      'SELECT supplements_taken FROM phoenix_supplements_taken AND date = $1',
+      [null, req.params.date]
     );
     res.json((result.rows[0] && result.rows[0].supplements_taken) || {});
   } catch (error) {
@@ -155,14 +153,14 @@ router.get('/supplements-taken/:date', authenticateToken, async (req, res) => {
 });
 
 // Save supplements taken
-router.post('/supplements-taken/:date', authenticateToken, async (req, res) => {
+router.post('/supplements-taken/:date', async (req, res) => {
   try {
     const { supplementsTaken } = req.body;
     await pool.query(
-      `INSERT INTO phoenix_supplements_taken (user_id, date, supplements_taken)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (user_id, date) DO UPDATE SET supplements_taken = $3`,
-      [req.user.userId, req.params.date, JSON.stringify(supplementsTaken)]
+      `INSERT INTO phoenix_supplements_taken (date, supplements_taken)
+       VALUES ($1, $2)
+       ON CONFLICT (date) DO UPDATE SET supplements_taken = $2`,
+      [null, req.params.date, JSON.stringify(supplementsTaken)]
     );
     res.json({ success: true });
   } catch (error) {
