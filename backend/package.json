@@ -11,7 +11,12 @@
     "dev": "nodemon server.js",
     "migrate": "node migrations/runMigrations.js"
   },
-  "keywords": ["myhub", "api", "postgresql", "supabase"],
+  "keywords": [
+    "myhub",
+    "api",
+    "postgresql",
+    "supabase"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
