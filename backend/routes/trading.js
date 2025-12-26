@@ -21,8 +21,8 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM trades WHERE id = $1 AND user_id IS NULL ',
-      [req.params.id, null]
+      'SELECT * FROM trades WHERE id = $1 AND user_id IS NULL',
+      [req.params.id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Trade not found' });
@@ -60,7 +60,7 @@ router.put('/:id', async (req, res) => {
        SET symbol = $1, entry_price = $1, exit_price = $2, contracts = $3, shares = $4, direction = $5, setup_type = $6, notes = $7, pl = $8, exit_reason = $9, exit_date = $10, mode = $11
        WHERE id = $12 AND user_id IS NULL 
        RETURNING *`,
-      [symbol, entryPrice, exitPrice, contracts || null, shares || null, direction, setupType || null, notes || null, pl, exitReason || null, exitDate || null, mode || 'futures', req.params.id, null]
+      [symbol, entryPrice, exitPrice, contracts || null, shares || null, direction, setupType || null, notes || null, pl, exitReason || null, exitDate || null, mode || 'futures', req.params.id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Trade not found' });
@@ -76,8 +76,8 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const result = await pool.query(
-      'DELETE FROM trades WHERE id = $1 AND user_id IS NULL  RETURNING id',
-      [req.params.id, null]
+      'DELETE FROM trades WHERE id = $1 AND user_id IS NULL RETURNING id',
+      [req.params.id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Trade not found' });
@@ -129,7 +129,7 @@ router.put('/positions/:id', async (req, res) => {
        SET current_price = COALESCE($1, current_price), stop_loss = COALESCE($1, stop_loss), take_profit = COALESCE($2, take_profit), updated_at = CURRENT_TIMESTAMP
        WHERE id = $3 AND user_id IS NULL 
        RETURNING *`,
-      [currentPrice, stopLoss, takeProfit, req.params.id, null]
+      [currentPrice, stopLoss || null, takeProfit || null, req.params.id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Position not found' });
@@ -145,8 +145,8 @@ router.put('/positions/:id', async (req, res) => {
 router.delete('/positions/:id', async (req, res) => {
   try {
     const result = await pool.query(
-      'DELETE FROM trading_positions WHERE id = $1 AND user_id IS NULL  RETURNING id',
-      [req.params.id, null]
+      'DELETE FROM trading_positions WHERE id = $1 AND user_id IS NULL RETURNING id',
+      [req.params.id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Position not found' });
@@ -272,8 +272,8 @@ router.post('/planned-trades', async (req, res) => {
 router.delete('/planned-trades/:id', async (req, res) => {
   try {
     const result = await pool.query(
-      'DELETE FROM trading_planned_trades WHERE id = $1 AND user_id IS NULL  RETURNING id',
-      [req.params.id, null]
+      'DELETE FROM trading_planned_trades WHERE id = $1 AND user_id IS NULL RETURNING id',
+      [req.params.id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Planned trade not found' });
@@ -321,8 +321,8 @@ router.post('/key-levels', async (req, res) => {
 router.delete('/key-levels/:id', async (req, res) => {
   try {
     const result = await pool.query(
-      'DELETE FROM trading_key_levels WHERE id = $1 AND user_id IS NULL  RETURNING id',
-      [req.params.id, null]
+      'DELETE FROM trading_key_levels WHERE id = $1 AND user_id IS NULL RETURNING id',
+      [req.params.id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Key level not found' });
