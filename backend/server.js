@@ -16,12 +16,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/phoenix', require('./routes/phoenix'));
-app.use('/api/tasks', require('./routes/tasks'));
-app.use('/api/diet', require('./routes/diet'));
 app.use('/api/trading', require('./routes/trading'));
-app.use('/api/learning', require('./routes/learning'));
-app.use('/api/projects', require('./routes/projects'));
 app.use('/api/hub', require('./routes/hub'));
 
 // Health check

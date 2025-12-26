@@ -501,7 +501,7 @@ const QuickCapture = {
         alert('Inbox capture - to be implemented');
         break;
       case 'task':
-        window.location.href = 'modules/task-tracker/index.html';
+        alert('Task feature removed - Trading Planner available');
         break;
       case 'idea':
         alert('Idea capture - to be implemented');
@@ -701,10 +701,10 @@ const Shortcuts = {
         alert('Quick command palette - to be implemented');
       }
 
-      // Ctrl+N - New task
+      // Ctrl+N - New trade (Trading Planner)
       if (e.ctrlKey && e.key === 'n') {
         e.preventDefault();
-        window.location.href = 'modules/task-tracker/index.html';
+        window.location.href = 'modules/trading-planner/index.html';
       }
     });
 
@@ -717,8 +717,7 @@ const Shortcuts = {
 
     const shortcuts = [
       { keys: 'Ctrl+K', description: 'Open quick command palette' },
-      { keys: 'Ctrl+N', description: 'New task' },
-      { keys: 'Ctrl+P', description: 'Open Pomodoro' },
+      { keys: 'Ctrl+N', description: 'Open Trading Planner' },
       { keys: 'Esc', description: 'Close modals' },
       { keys: 'Ctrl+,', description: 'Open settings' }
     ];

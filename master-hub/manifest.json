@@ -60,10 +60,10 @@
   "categories": ["productivity", "lifestyle", "health"],
   "shortcuts": [
     {
-      "name": "Phoenix Planner",
-      "short_name": "Phoenix",
-      "description": "Open Phoenix Planner",
-      "url": "/modules/phoenix-planner/index.html",
+      "name": "Trading Planner",
+      "short_name": "Trading",
+      "description": "Open Trading Planner",
+      "url": "/modules/trading-planner/index.html",
       "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
     },
     {
