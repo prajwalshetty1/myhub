@@ -1,4 +1,4 @@
-// Advanced Journal App with Rich Features
+// Advanced Journal App - Updated for New UI
 const AdvancedJournal = {
   entries: [],
   filteredEntries: [],
@@ -44,25 +44,32 @@ const AdvancedJournal = {
   ],
 
   async init() {
+    console.log('🚀 Initializing Journal App...');
     await this.initEditor();
     await this.loadEntries();
     this.setupEventListeners();
     this.renderCalendar();
     this.updateStats();
     this.loadEntryForDate(this.selectedDate);
-    this.updateCurrentDate();
+    this.updateSelectedDate();
     this.renderTemplates();
+    console.log('✅ Journal App initialized successfully');
   },
 
   getClient() {
-    return window.SupabaseClient || window.API;
+    if (window.SupabaseClient && window.location.hostname === 'localhost') {
+      console.log('Using Supabase Direct Client');
+      return window.SupabaseClient;
+    }
+    console.log('Using Backend API Client');
+    return window.API;
   },
 
   // Initialize Quill Rich Text Editor
   initEditor() {
     this.editor = new Quill('#editor', {
       theme: 'snow',
-      placeholder: 'Start writing your journal entry...',
+      placeholder: 'Start writing your thoughts...',
       modules: {
         toolbar: [
           [{ 'header': [1, 2, 3, false] }],
@@ -80,10 +87,13 @@ const AdvancedJournal = {
     this.editor.on('text-change', () => {
       this.updateWordCount();
     });
+    
+    console.log('📝 Editor initialized');
   },
 
   async loadEntries() {
     try {
+      console.log('📚 Loading journal entries...');
       const client = this.getClient();
       
       if (client.getJournalEntries) {
@@ -93,16 +103,26 @@ const AdvancedJournal = {
       }
       
       this.filteredEntries = [...this.entries];
+      console.log(`✅ Loaded ${this.entries.length} entries`);
     } catch (error) {
-      console.error('Error loading journal entries:', error);
+      console.error('❌ Error loading journal entries:', error);
       this.entries = [];
       this.filteredEntries = [];
+      this.showToast('Failed to load entries', 'error');
     }
   },
 
   setupEventListeners() {
+    console.log('🎯 Setting up event listeners...');
+    
     // Save button
-    document.getElementById('saveBtn').addEventListener('click', () => this.saveEntry());
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        console.log('💾 Save button clicked');
+        this.saveEntry();
+      });
+    }
 
     // Calendar navigation
     document.getElementById('prevMonth').addEventListener('click', () => {
@@ -124,9 +144,13 @@ const AdvancedJournal = {
     });
 
     // Favorite button
-    document.getElementById('favoriteBtn').addEventListener('click', () => {
-      this.toggleFavorite();
-    });
+    const favoriteBtn = document.getElementById('favoriteBtn');
+    if (favoriteBtn) {
+      favoriteBtn.addEventListener('click', () => {
+        console.log('⭐ Favorite button clicked');
+        this.toggleFavorite();
+      });
+    }
 
     // Filters
     document.getElementById('categoryFilter').addEventListener('change', () => this.applyFilters());
@@ -140,23 +164,37 @@ const AdvancedJournal = {
     document.getElementById('templatesBtn').addEventListener('click', () => this.openTemplates());
 
     // Close buttons
-    document.querySelectorAll('.close-btn').forEach(btn => {
+    document.querySelectorAll('.modal-close').forEach(btn => {
       btn.addEventListener('click', (e) => {
         this.closeModal(e.target.dataset.modal);
       });
     });
 
-    // Search
-    document.getElementById('searchInput').addEventListener('input', (e) => {
-      this.performSearch(e.target.value);
+    // Close modal on backdrop click
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+      backdrop.addEventListener('click', () => {
+        backdrop.parentElement.classList.remove('show');
+      });
     });
 
+    // Search
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        this.performSearch(e.target.value);
+      });
+    }
+
     // Export
-    document.getElementById('confirmExport').addEventListener('click', () => this.exportEntries());
+    const confirmExportBtn = document.getElementById('confirmExport');
+    if (confirmExportBtn) {
+      confirmExportBtn.addEventListener('click', () => this.exportEntries());
+    }
 
     // Auto-save every 30 seconds
     setInterval(() => {
       if (this.hasUnsavedChanges()) {
+        console.log('💾 Auto-saving...');
         this.saveEntry(true);
       }
     }, 30000);
@@ -166,14 +204,18 @@ const AdvancedJournal = {
       // Ctrl/Cmd + S to save
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
+        console.log('⌨️ Keyboard shortcut: Save');
         this.saveEntry();
       }
       // Ctrl/Cmd + K to search
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
+        console.log('⌨️ Keyboard shortcut: Search');
         this.openSearch();
       }
     });
+    
+    console.log('✅ Event listeners set up');
   },
 
   renderCalendar() {
@@ -229,17 +271,20 @@ const AdvancedJournal = {
   },
 
   selectDate(date) {
+    console.log('📅 Selected date:', date);
     this.selectedDate = date;
     this.renderCalendar();
     this.loadEntryForDate(date);
-    this.updateCurrentDate();
+    this.updateSelectedDate();
   },
 
   loadEntryForDate(date) {
+    console.log('📖 Loading entry for date:', date);
     const entry = this.entries.find(e => e.date === date);
     this.currentEntry = entry;
     
     if (entry) {
+      console.log('✅ Entry found:', entry);
       document.getElementById('entryTitle').value = entry.title || '';
       this.editor.root.innerHTML = entry.content || '';
       document.getElementById('categorySelector').value = entry.category || '';
@@ -256,14 +301,16 @@ const AdvancedJournal = {
         favoriteBtn.querySelector('svg').setAttribute('fill', 'none');
       }
     } else {
+      console.log('📝 No entry found, creating new');
       // Clear form for new entry
       document.getElementById('entryTitle').value = '';
       this.editor.setText('');
       document.getElementById('categorySelector').value = '';
       document.getElementById('moodSelector').value = '';
       document.getElementById('tagsInput').value = '';
-      document.getElementById('favoriteBtn').classList.remove('active');
-      document.getElementById('favoriteBtn').querySelector('svg').setAttribute('fill', 'none');
+      const favoriteBtn = document.getElementById('favoriteBtn');
+      favoriteBtn.classList.remove('active');
+      favoriteBtn.querySelector('svg').setAttribute('fill', 'none');
     }
     
     this.updateWordCount();
@@ -272,10 +319,7 @@ const AdvancedJournal = {
   updateWordCount() {
     const text = this.editor.getText().trim();
     const words = text.split(/\s+/).filter(w => w.length > 0).length;
-    const chars = text.length;
-    
     document.getElementById('wordCount').textContent = words;
-    document.getElementById('charCount').textContent = chars;
   },
 
   hasUnsavedChanges() {
@@ -288,6 +332,8 @@ const AdvancedJournal = {
   },
 
   async saveEntry(silent = false) {
+    console.log('💾 Saving entry...');
+    
     const title = document.getElementById('entryTitle').value;
     const content = this.editor.root.innerHTML;
     const category = document.getElementById('categorySelector').value;
@@ -296,10 +342,13 @@ const AdvancedJournal = {
     const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(t => t) : [];
     const is_favorite = document.getElementById('favoriteBtn').classList.contains('active');
 
+    console.log('📝 Entry data:', { title, category, mood, tags, is_favorite, contentLength: content.length });
+
     if (!this.editor.getText().trim()) {
       if (!silent) {
-        this.showToast('Please write something before saving!', 'error');
+        this.showToast('Please write something before saving! ✍️', 'error');
       }
+      console.log('⚠️ Cannot save empty entry');
       return;
     }
 
@@ -316,15 +365,34 @@ const AdvancedJournal = {
         is_favorite
       };
 
+      console.log('📤 Sending to API:', entryData);
+
       let saved;
       if (client.saveJournalEntry) {
-        saved = await client.saveJournalEntry(entryData);
+        // Supabase direct client
+        saved = await client.saveJournalEntry(
+          entryData.date,
+          entryData.title,
+          entryData.content,
+          entryData.mood,
+          entryData.tags
+        );
+        // Update is_favorite separately if needed
+        if (this.currentEntry && this.currentEntry.is_favorite !== is_favorite) {
+          await client.request('journal_entries', 'PATCH', 
+            { is_favorite }, 
+            `user_id=is.null&date=eq.${this.selectedDate}`
+          );
+        }
       } else {
+        // Backend API client
         saved = await client.request('/journal', {
           method: 'POST',
           body: JSON.stringify(entryData)
         });
       }
+
+      console.log('✅ Entry saved:', saved);
 
       // Update local entries
       const existingIndex = this.entries.findIndex(e => e.date === this.selectedDate);
@@ -343,7 +411,7 @@ const AdvancedJournal = {
         this.showToast('Entry saved successfully! ✓', 'success');
       }
     } catch (error) {
-      console.error('Error saving entry:', error);
+      console.error('❌ Error saving entry:', error);
       if (!silent) {
         this.showToast('Failed to save entry. Please try again.', 'error');
       }
@@ -404,21 +472,14 @@ const AdvancedJournal = {
     // Total entries
     document.getElementById('totalEntries').textContent = this.filteredEntries.length;
 
-    // Current streak
+    // Streak
     const streak = this.calculateStreak();
-    document.getElementById('currentStreak').textContent = `${streak} day${streak !== 1 ? 's' : ''}`;
+    document.getElementById('streakNum').textContent = streak;
 
     // Total words
     const totalWords = this.entries.reduce((sum, entry) => sum + (entry.word_count || 0), 0);
-    document.getElementById('totalWords').textContent = totalWords.toLocaleString();
-
-    // This month entries
-    const monthEntries = this.entries.filter(e => {
-      const entryDate = new Date(e.date);
-      return entryDate.getMonth() === new Date().getMonth() && 
-             entryDate.getFullYear() === new Date().getFullYear();
-    }).length;
-    document.getElementById('monthEntries').textContent = monthEntries;
+    const formattedWords = totalWords >= 1000 ? `${(totalWords / 1000).toFixed(1)}k` : totalWords;
+    document.getElementById('totalWords').textContent = formattedWords;
   },
 
   calculateStreak() {
@@ -446,10 +507,15 @@ const AdvancedJournal = {
     return streak;
   },
 
-  updateCurrentDate() {
+  updateSelectedDate() {
     const date = new Date(this.selectedDate);
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    document.getElementById('currentDate').textContent = date.toLocaleDateString('en-US', options);
+    const formattedDate = date.toLocaleDateString('en-US', options);
+    
+    const selectedDateEl = document.getElementById('selectedDate');
+    if (selectedDateEl) {
+      selectedDateEl.textContent = formattedDate;
+    }
   },
 
   // Search functionality
@@ -524,6 +590,8 @@ const AdvancedJournal = {
       this.renderAnalytics();
     } catch (error) {
       console.error('Error loading analytics:', error);
+      this.analytics = this.calculateAnalytics();
+      this.renderAnalytics();
     }
   },
 
@@ -616,15 +684,16 @@ const AdvancedJournal = {
     // Activity chart (simple representation)
     const monthlyStats = this.calculateMonthlyStats();
     document.getElementById('activityChart').innerHTML = monthlyStats.map(m => {
-      const barWidth = (m.count / Math.max(...monthlyStats.map(s => s.count)) * 100);
+      const maxCount = Math.max(...monthlyStats.map(s => s.count));
+      const barWidth = maxCount > 0 ? (m.count / maxCount * 100) : 0;
       return `
         <div style="margin-bottom: 0.75rem;">
           <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem; font-size: 0.85rem;">
             <span>${m.month}</span>
             <span style="font-weight: 600;">${m.count}</span>
           </div>
-          <div style="width: 100%; height: 24px; background: var(--bg-primary); border-radius: 4px; overflow: hidden;">
-            <div style="width: ${barWidth}%; height: 100%; background: var(--accent-primary); transition: width 0.3s;"></div>
+          <div style="width: 100%; height: 24px; background: var(--bg-tertiary); border-radius: 4px; overflow: hidden;">
+            <div style="width: ${barWidth}%; height: 100%; background: var(--accent-gradient); transition: width 0.3s;"></div>
           </div>
         </div>
       `;
@@ -672,8 +741,9 @@ const AdvancedJournal = {
       }
 
       if (format === 'markdown') {
-        const response = await fetch(`${client.baseUrl || '/api'}${url}`, {
-          headers: client.headers || {}
+        const baseUrl = client.supabaseUrl ? `${client.supabaseUrl}/rest/v1` : (window.API ? `${window.API.API_BASE_URL || '/api'}` : '/api');
+        const response = await fetch(`${baseUrl}${url}`, {
+          headers: client.headers || (window.API ? window.API.getHeaders() : {})
         });
         const blob = await response.blob();
         const downloadUrl = window.URL.createObjectURL(blob);
@@ -744,5 +814,6 @@ const AdvancedJournal = {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('🎨 DOM Content Loaded, initializing Journal...');
   AdvancedJournal.init();
 });
