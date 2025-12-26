@@ -1,265 +1,1277 @@
-// Trading Planner Module
+// Trading Planner - Complete Implementation
 
 const TradingPlanner = {
-  trades: [],
-  mode: 'futures', // 'futures' or 'stocks'
-  contracts: {
-    MES: { pointValue: 5, tickSize: 0.25, tickValue: 1.25 },
-    MNQ: { pointValue: 2, tickSize: 0.25, tickValue: 0.50 },
-    PL: { pointValue: 50, tickSize: 0.10, tickValue: 5.00 },
-    SIL: { pointValue: 5000, tickSize: 0.005, tickValue: 25 }
+  // Data Storage Keys
+  STORAGE_KEYS: {
+    TRADES: 'tradingTrades',
+    POSITIONS: 'tradingPositions',
+    MODE: 'tradingMode',
+    SETTINGS: 'tradingSettings',
+    PLANNED_TRADES: 'tradingPlannedTrades',
+    KEY_LEVELS: 'tradingKeyLevels',
+    EXECUTION_STAGES: 'tradingExecutionStages',
+    PSYCHOLOGY: 'tradingPsychology',
+    WATCHLIST: 'tradingWatchlist'
   },
+
+  // State
+  trades: [],
+  positions: [],
+  mode: 'futures',
+  settings: {
+    futuresBalance: 10000,
+    stocksBalance: 195000,
+    dailyLossLimit: 500,
+    maxRiskPerTrade: 2
+  },
+  plannedTrades: [],
+  keyLevels: [],
+  executionStages: {},
+  psychology: [],
+  watchlist: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA'],
+  currentCalendarMonth: new Date().getMonth(),
+  currentCalendarYear: 2026,
+
+  // Futures Contracts Data
+  contracts: {
+    MES: { 
+      pointValue: 5, 
+      tickSize: 0.25, 
+      tickValue: 1.25,
+      name: 'Micro E-mini S&P 500'
+    },
+    MNQ: { 
+      pointValue: 2, 
+      tickSize: 0.25, 
+      tickValue: 0.50,
+      name: 'Micro E-mini Nasdaq-100'
+    },
+    PL: { 
+      pointValue: 50, 
+      tickSize: 0.10, 
+      tickValue: 5.00,
+      name: 'Platinum'
+    },
+    SIL: { 
+      pointValue: 5000, 
+      tickSize: 0.005, 
+      tickValue: 25,
+      name: 'Silver'
+    }
+  },
+
+  // Default Stocks
+  defaultStocks: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX'],
 
   init() {
-    this.loadTrades();
-    this.render();
+    this.loadAllData();
     this.setupEventListeners();
+    this.render();
+    this.initTradingView();
+    this.updateRiskPanel();
+    this.updateAccountDisplay();
   },
 
-  loadTrades() {
-    const saved = localStorage.getItem('tradingTrades');
-    if (saved) {
-      this.trades = JSON.parse(saved);
-    } else {
-      this.trades = [];
+  // ===== DATA PERSISTENCE =====
+  loadAllData() {
+    // Load trades
+    const savedTrades = localStorage.getItem(this.STORAGE_KEYS.TRADES);
+    if (savedTrades) this.trades = JSON.parse(savedTrades);
+
+    // Load positions
+    const savedPositions = localStorage.getItem(this.STORAGE_KEYS.POSITIONS);
+    if (savedPositions) this.positions = JSON.parse(savedPositions);
+
+    // Load mode
+    const savedMode = localStorage.getItem(this.STORAGE_KEYS.MODE);
+    if (savedMode) this.mode = savedMode;
+
+    // Load settings
+    const savedSettings = localStorage.getItem(this.STORAGE_KEYS.SETTINGS);
+    if (savedSettings) {
+      this.settings = { ...this.settings, ...JSON.parse(savedSettings) };
     }
-    
-    const savedMode = localStorage.getItem('tradingMode');
-    if (savedMode) {
-      this.mode = savedMode;
-    }
+
+    // Load planned trades
+    const savedPlanned = localStorage.getItem(this.STORAGE_KEYS.PLANNED_TRADES);
+    if (savedPlanned) this.plannedTrades = JSON.parse(savedPlanned);
+
+    // Load key levels
+    const savedLevels = localStorage.getItem(this.STORAGE_KEYS.KEY_LEVELS);
+    if (savedLevels) this.keyLevels = JSON.parse(savedLevels);
+
+    // Load execution stages
+    const savedStages = localStorage.getItem(this.STORAGE_KEYS.EXECUTION_STAGES);
+    if (savedStages) this.executionStages = JSON.parse(savedStages);
+
+    // Load psychology
+    const savedPsych = localStorage.getItem(this.STORAGE_KEYS.PSYCHOLOGY);
+    if (savedPsych) this.psychology = JSON.parse(savedPsych);
+
+    // Load watchlist
+    const savedWatchlist = localStorage.getItem(this.STORAGE_KEYS.WATCHLIST);
+    if (savedWatchlist) this.watchlist = JSON.parse(savedWatchlist);
   },
 
-  saveTrades() {
-    localStorage.setItem('tradingTrades', JSON.stringify(this.trades));
-    localStorage.setItem('tradingMode', this.mode);
+  saveAllData() {
+    localStorage.setItem(this.STORAGE_KEYS.TRADES, JSON.stringify(this.trades));
+    localStorage.setItem(this.STORAGE_KEYS.POSITIONS, JSON.stringify(this.positions));
+    localStorage.setItem(this.STORAGE_KEYS.MODE, this.mode);
+    localStorage.setItem(this.STORAGE_KEYS.SETTINGS, JSON.stringify(this.settings));
+    localStorage.setItem(this.STORAGE_KEYS.PLANNED_TRADES, JSON.stringify(this.plannedTrades));
+    localStorage.setItem(this.STORAGE_KEYS.KEY_LEVELS, JSON.stringify(this.keyLevels));
+    localStorage.setItem(this.STORAGE_KEYS.EXECUTION_STAGES, JSON.stringify(this.executionStages));
+    localStorage.setItem(this.STORAGE_KEYS.PSYCHOLOGY, JSON.stringify(this.psychology));
+    localStorage.setItem(this.STORAGE_KEYS.WATCHLIST, JSON.stringify(this.watchlist));
   },
 
+  // ===== P&L CALCULATIONS =====
   calculatePL(trade) {
     if (this.mode === 'futures') {
-      const contract = this.contracts[trade.symbol] || { pointValue: 5 };
-      const priceDiff = trade.direction === 'long' 
-        ? trade.exitPrice - trade.entryPrice
-        : trade.entryPrice - trade.exitPrice;
-      return priceDiff * contract.pointValue * trade.contracts;
+      return this.calculateFuturesPL(trade);
     } else {
-      // Stocks mode
-      const priceDiff = trade.direction === 'long'
-        ? trade.exitPrice - trade.entryPrice
-        : trade.entryPrice - trade.exitPrice;
-      return priceDiff * trade.contracts;
+      return this.calculateStocksPL(trade);
     }
   },
 
-  calculateStats() {
-    if (this.trades.length === 0) {
-      return {
-        totalPL: 0,
-        winRate: 0,
-        totalTrades: 0,
-        avgWin: 0
-      };
-    }
+  calculateFuturesPL(trade) {
+    const contract = this.contracts[trade.symbol];
+    if (!contract) return 0;
+
+    const priceDiff = trade.direction === 'long' 
+      ? trade.exitPrice - trade.entryPrice
+      : trade.entryPrice - trade.exitPrice;
     
-    const totalPL = this.trades.reduce((sum, t) => sum + t.pl, 0);
-    const winningTrades = this.trades.filter(t => t.pl > 0);
-    const winRate = (winningTrades.length / this.trades.length) * 100;
-    const avgWin = winningTrades.length > 0
-      ? winningTrades.reduce((sum, t) => sum + t.pl, 0) / winningTrades.length
-      : 0;
-    
-    return { totalPL, winRate, totalTrades: this.trades.length, avgWin };
+    return priceDiff * contract.pointValue * trade.contracts;
   },
 
+  calculateStocksPL(trade) {
+    const priceDiff = trade.direction === 'long'
+      ? trade.exitPrice - trade.entryPrice
+      : trade.entryPrice - trade.exitPrice;
+    
+    return priceDiff * trade.shares;
+  },
+
+  // ===== RISK CALCULATIONS =====
+  calculateRiskAmount(entryPrice, stopLoss, size, direction) {
+    if (!entryPrice || !stopLoss || !size) return 0;
+
+    const priceDiff = Math.abs(entryPrice - stopLoss);
+    
+    if (this.mode === 'futures') {
+      const symbol = document.getElementById('tradeSymbol')?.value;
+      const contract = this.contracts[symbol];
+      if (!contract) return 0;
+      return priceDiff * contract.pointValue * size;
+    } else {
+      return priceDiff * size;
+    }
+  },
+
+  calculatePositionSize(riskAmount, entryPrice, stopLoss) {
+    if (!entryPrice || !stopLoss || !riskAmount) return 0;
+
+    const priceDiff = Math.abs(entryPrice - stopLoss);
+    if (priceDiff === 0) return 0;
+
+    if (this.mode === 'futures') {
+      const symbol = document.getElementById('tradeSymbol')?.value;
+      const contract = this.contracts[symbol];
+      if (!contract) return 0;
+      return Math.floor(riskAmount / (priceDiff * contract.pointValue));
+    } else {
+      return Math.floor(riskAmount / priceDiff);
+    }
+  },
+
+  // ===== EVENT LISTENERS =====
+  setupEventListeners() {
+    // Tab navigation
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const tab = e.target.dataset.tab;
+        this.switchTab(tab);
+      });
+    });
+
+    // Mode toggle
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const mode = e.target.dataset.mode;
+        this.switchMode(mode);
+      });
+    });
+
+    // Trade entry form
+    const tradeForm = document.getElementById('tradeEntryForm');
+    if (tradeForm) {
+      tradeForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.enterTrade();
+      });
+      tradeForm.addEventListener('input', () => this.updateRiskCalculator());
+    }
+
+    // Settings
+    const settingsBtn = document.getElementById('settingsBtn');
+    const closeSettingsBtn = document.getElementById('closeSettingsModal');
+    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+    
+    if (settingsBtn) settingsBtn.addEventListener('click', () => this.openSettings());
+    if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => this.closeSettings());
+    if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', () => this.saveSettings());
+
+    // New position button
+    const newPosBtn = document.getElementById('newPositionBtn');
+    if (newPosBtn) newPosBtn.addEventListener('click', () => this.focusTradeEntry());
+
+    // Close position
+    const closePosForm = document.getElementById('closePositionForm');
+    if (closePosForm) {
+      closePosForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.closePosition();
+      });
+      closePosForm.addEventListener('input', () => this.updateClosePL());
+    }
+
+    const closePosModalBtn = document.getElementById('closePositionModalBtn');
+    if (closePosModalBtn) closePosModalBtn.addEventListener('click', () => this.closePositionModal());
+
+    // Journal calendar
+    const prevMonthBtn = document.getElementById('prevMonth');
+    const nextMonthBtn = document.getElementById('nextMonth');
+    if (prevMonthBtn) prevMonthBtn.addEventListener('click', () => this.changeMonth(-1));
+    if (nextMonthBtn) nextMonthBtn.addEventListener('click', () => this.changeMonth(1));
+
+    // Journal filter
+    const journalFilter = document.getElementById('journalFilter');
+    if (journalFilter) journalFilter.addEventListener('change', () => this.renderJournal());
+
+    // Planner
+    const newPlannedBtn = document.getElementById('newPlannedTradeBtn');
+    const newKeyLevelBtn = document.getElementById('newKeyLevelBtn');
+    if (newPlannedBtn) newPlannedBtn.addEventListener('click', () => this.addPlannedTrade());
+    if (newKeyLevelBtn) newKeyLevelBtn.addEventListener('click', () => this.addKeyLevel());
+
+    // Execution stages
+    document.querySelectorAll('#executionStagesList input[type="checkbox"]').forEach(checkbox => {
+      checkbox.addEventListener('change', (e) => {
+        const stage = e.target.dataset.stage;
+        this.executionStages[stage] = e.target.checked;
+        this.saveAllData();
+      });
+    });
+
+    // Psychology
+    const savePsychBtn = document.getElementById('savePsychologyBtn');
+    if (savePsychBtn) savePsychBtn.addEventListener('click', () => this.savePsychology());
+
+    // Watchlist
+    const addWatchlistBtn = document.getElementById('addWatchlistBtn');
+    if (addWatchlistBtn) addWatchlistBtn.addEventListener('click', () => this.addToWatchlist());
+
+    // Chart symbol change
+    const chartSymbol = document.getElementById('chartSymbol');
+    if (chartSymbol) chartSymbol.addEventListener('change', () => this.updateTradingView());
+
+    // Chart timeframe change
+    const chartTimeframe = document.getElementById('chartTimeframe');
+    if (chartTimeframe) chartTimeframe.addEventListener('change', () => this.updateTradingView());
+  },
+
+  // ===== TAB MANAGEMENT =====
+  switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.remove('active');
+      if (btn.dataset.tab === tabName) btn.classList.add('active');
+    });
+
+    // Update tab panes
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+      pane.classList.remove('active');
+    });
+
+    const activePane = document.getElementById(`${tabName}-tab`);
+    if (activePane) {
+      activePane.classList.add('active');
+      
+      // Render specific tab content
+      if (tabName === 'journal') this.renderJournal();
+      else if (tabName === 'planner') this.renderPlanner();
+      else if (tabName === 'analytics') this.renderAnalytics();
+      else if (tabName === 'playbook') this.renderPlaybook();
+      else if (tabName === 'charts') this.updateTradingView();
+    }
+  },
+
+  // ===== MODE MANAGEMENT =====
+  switchMode(mode) {
+    this.mode = mode;
+    
+    // Update UI
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.classList.remove('active');
+      if (btn.dataset.mode === mode) btn.classList.add('active');
+    });
+
+    // Update symbol options
+    const futuresOpts = document.getElementById('futuresOptions');
+    const stocksOpts = document.getElementById('stocksOptions');
+    const sizeLabel = document.getElementById('sizeLabel');
+    
+    if (mode === 'futures') {
+      if (futuresOpts) futuresOpts.style.display = 'block';
+      if (stocksOpts) stocksOpts.style.display = 'none';
+      if (sizeLabel) sizeLabel.textContent = 'Contracts';
+    } else {
+      if (futuresOpts) futuresOpts.style.display = 'none';
+      if (stocksOpts) stocksOpts.style.display = 'block';
+      if (sizeLabel) sizeLabel.textContent = 'Shares';
+    }
+
+    this.updateAccountDisplay();
+    this.updateRiskPanel();
+    this.saveAllData();
+  },
+
+  // ===== RENDERING =====
   render() {
-    this.renderStats();
-    this.renderTrades();
+    this.renderPositions();
+    this.updateRiskCalculator();
+    this.renderJournal();
+    this.renderPlanner();
+    this.renderAnalytics();
+    this.renderPlaybook();
   },
 
-  renderStats() {
-    const stats = this.calculateStats();
-    
-    document.getElementById('totalPL').textContent = 
-      `$${stats.totalPL >= 0 ? '+' : ''}${stats.totalPL.toFixed(2)}`;
-    document.getElementById('totalPL').style.color = 
-      stats.totalPL >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
-    
-    document.getElementById('winRate').textContent = `${stats.winRate.toFixed(1)}%`;
-    document.getElementById('totalTrades').textContent = stats.totalTrades;
-    document.getElementById('avgWin').textContent = `$${stats.avgWin.toFixed(2)}`;
-  },
-
-  renderTrades() {
-    const list = document.getElementById('tradeList');
+  renderPositions() {
+    const list = document.getElementById('positionsList');
     if (!list) return;
-    
-    if (this.trades.length === 0) {
-      list.innerHTML = '<p style="color: var(--text-secondary);">No trades logged yet.</p>';
+
+    if (this.positions.length === 0) {
+      list.innerHTML = '<div class="empty-state">No open positions</div>';
       return;
     }
+
+    list.innerHTML = this.positions.map(pos => {
+      const pl = this.calculatePositionPL(pos);
+      const plClass = pl >= 0 ? 'positive' : 'negative';
+      const plSign = pl >= 0 ? '+' : '';
+      
+      return `
+        <div class="position-item ${pl >= 0 ? 'profit' : 'loss'}" data-position-id="${pos.id}">
+          <div>
+            <div class="position-symbol">${pos.symbol}</div>
+            <div class="position-details">${pos.direction.toUpperCase()} | ${pos.size} ${this.mode === 'futures' ? 'contracts' : 'shares'}</div>
+          </div>
+          <div>
+            <div class="position-details">Entry: $${pos.entryPrice.toFixed(2)}</div>
+            <div class="position-details">Stop: $${pos.stopLoss?.toFixed(2) || 'N/A'}</div>
+          </div>
+          <div>
+            <div class="position-details">Target: $${pos.takeProfit?.toFixed(2) || 'N/A'}</div>
+            <div class="position-details">Current: $${pos.currentPrice?.toFixed(2) || pos.entryPrice.toFixed(2)}</div>
+          </div>
+          <div>
+            <div class="position-pl ${plClass}">${plSign}$${pl.toFixed(2)}</div>
+            <div class="position-details">${((pl / (pos.entryPrice * pos.size)) * 100).toFixed(2)}%</div>
+          </div>
+          <button class="btn-terminal btn-sm" onclick="TradingPlanner.openClosePositionModal('${pos.id}')">CLOSE</button>
+        </div>
+      `;
+    }).join('');
+  },
+
+  calculatePositionPL(position) {
+    if (!position.currentPrice) return 0;
+
+    if (this.mode === 'futures') {
+      const contract = this.contracts[position.symbol];
+      if (!contract) return 0;
+      const priceDiff = position.direction === 'long'
+        ? position.currentPrice - position.entryPrice
+        : position.entryPrice - position.currentPrice;
+      return priceDiff * contract.pointValue * position.size;
+    } else {
+      const priceDiff = position.direction === 'long'
+        ? position.currentPrice - position.entryPrice
+        : position.entryPrice - position.currentPrice;
+      return priceDiff * position.size;
+    }
+  },
+
+  // ===== TRADE ENTRY =====
+  enterTrade() {
+    const symbol = document.getElementById('tradeSymbol').value;
+    const direction = document.getElementById('tradeDirection').value;
+    const entryPrice = parseFloat(document.getElementById('entryPrice').value);
+    const size = parseInt(document.getElementById('tradeSize').value);
+    const stopLoss = parseFloat(document.getElementById('stopLoss').value) || null;
+    const takeProfit = parseFloat(document.getElementById('takeProfit').value) || null;
+    const setupType = document.getElementById('setupType').value || null;
+    const riskPercent = parseFloat(document.getElementById('riskPercent').value) || 1;
+
+    if (!symbol || !entryPrice || !size) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    // Check risk limits
+    if (stopLoss) {
+      const riskAmount = this.calculateRiskAmount(entryPrice, stopLoss, size, direction);
+      const accountBalance = this.mode === 'futures' ? this.settings.futuresBalance : this.settings.stocksBalance;
+      const maxRisk = accountBalance * (this.settings.maxRiskPerTrade / 100);
+      
+      if (riskAmount > maxRisk) {
+        if (!confirm(`Risk amount ($${riskAmount.toFixed(2)}) exceeds max risk per trade ($${maxRisk.toFixed(2)}). Continue?`)) {
+          return;
+        }
+      }
+    }
+
+    // Create position
+    const position = {
+      id: Date.now().toString(),
+      symbol,
+      direction,
+      entryPrice,
+      size: this.mode === 'futures' ? size : size, // For stocks, size is shares
+      stopLoss,
+      takeProfit,
+      setupType,
+      currentPrice: entryPrice,
+      entryDate: new Date().toISOString(),
+      mode: this.mode
+    };
+
+    this.positions.push(position);
+    this.saveAllData();
+    this.renderPositions();
+    document.getElementById('tradeEntryForm').reset();
+    this.updateRiskCalculator();
+  },
+
+  // ===== CLOSE POSITION =====
+  openClosePositionModal(positionId) {
+    const position = this.positions.find(p => p.id === positionId);
+    if (!position) return;
+
+    document.getElementById('closePositionId').value = positionId;
+    document.getElementById('closeExitPrice').value = position.currentPrice || position.entryPrice;
+    document.getElementById('closePositionModal').classList.add('active');
+    this.updateClosePL();
+  },
+
+  closePositionModal() {
+    document.getElementById('closePositionModal').classList.remove('active');
+  },
+
+  updateClosePL() {
+    const positionId = document.getElementById('closePositionId').value;
+    const exitPrice = parseFloat(document.getElementById('closeExitPrice').value) || 0;
+    const position = this.positions.find(p => p.id === positionId);
     
-    list.innerHTML = this.trades
-      .sort((a, b) => new Date(b.date) - new Date(a.date))
-      .map(trade => `
-        <div class="trade-card ${trade.pl >= 0 ? 'profit' : 'loss'}">
-          <div class="trade-header">
-            <div class="trade-symbol">${trade.symbol}</div>
-            <div class="trade-pl ${trade.pl >= 0 ? 'positive' : 'negative'}">
-              ${trade.pl >= 0 ? '+' : ''}$${trade.pl.toFixed(2)}
+    if (!position || !exitPrice) return;
+
+    const pl = this.calculatePL({
+      symbol: position.symbol,
+      direction: position.direction,
+      entryPrice: position.entryPrice,
+      exitPrice: exitPrice,
+      contracts: position.size,
+      shares: position.size
+    });
+
+    const plDisplay = document.getElementById('closePLDisplay');
+    if (plDisplay) {
+      plDisplay.textContent = `P&L: ${pl >= 0 ? '+' : ''}$${pl.toFixed(2)}`;
+      plDisplay.style.color = pl >= 0 ? '#00ff00' : '#ff4444';
+    }
+  },
+
+  closePosition() {
+    const positionId = document.getElementById('closePositionId').value;
+    const exitPrice = parseFloat(document.getElementById('closeExitPrice').value);
+    const reason = document.getElementById('closeReason').value;
+    const notes = document.getElementById('closeNotes').value;
+
+    const position = this.positions.find(p => p.id === positionId);
+    if (!position) return;
+
+    // Calculate P&L
+    const pl = this.calculatePL({
+      symbol: position.symbol,
+      direction: position.direction,
+      entryPrice: position.entryPrice,
+      exitPrice: exitPrice,
+      contracts: position.size,
+      shares: position.size
+    });
+
+    // Create trade record
+    const trade = {
+      id: Date.now().toString(),
+      symbol: position.symbol,
+      direction: position.direction,
+      entryPrice: position.entryPrice,
+      exitPrice: exitPrice,
+      contracts: this.mode === 'futures' ? position.size : undefined,
+      shares: this.mode === 'stocks' ? position.size : undefined,
+      stopLoss: position.stopLoss,
+      takeProfit: position.takeProfit,
+      setupType: position.setupType,
+      exitReason: reason,
+      notes: notes,
+      pl: pl,
+      date: position.entryDate,
+      exitDate: new Date().toISOString(),
+      mode: position.mode
+    };
+
+    this.trades.push(trade);
+
+    // Remove position
+    this.positions = this.positions.filter(p => p.id !== positionId);
+
+    // Update account balance
+    if (this.mode === 'futures') {
+      this.settings.futuresBalance += pl;
+    } else {
+      this.settings.stocksBalance += pl;
+    }
+
+    this.saveAllData();
+    this.renderPositions();
+    this.renderJournal();
+    this.updateAccountDisplay();
+    this.updateRiskPanel();
+    this.closePositionModal();
+  },
+
+  // ===== RISK CALCULATOR =====
+  updateRiskCalculator() {
+    const entryPrice = parseFloat(document.getElementById('entryPrice')?.value) || 0;
+    const stopLoss = parseFloat(document.getElementById('stopLoss')?.value) || 0;
+    const size = parseInt(document.getElementById('tradeSize')?.value) || 0;
+    const takeProfit = parseFloat(document.getElementById('takeProfit')?.value) || 0;
+    const riskPercent = parseFloat(document.getElementById('riskPercent')?.value) || 1;
+    const direction = document.getElementById('tradeDirection')?.value || 'long';
+
+    if (!entryPrice) {
+      this.clearRiskCalculator();
+      return;
+    }
+
+    const accountBalance = this.mode === 'futures' ? this.settings.futuresBalance : this.settings.stocksBalance;
+    const riskAmount = accountBalance * (riskPercent / 100);
+
+    // Calculate position size if stop loss is provided
+    let calculatedSize = size;
+    if (stopLoss && stopLoss !== entryPrice) {
+      calculatedSize = this.calculatePositionSize(riskAmount, entryPrice, stopLoss);
+      if (calculatedSize > 0 && size !== calculatedSize) {
+        document.getElementById('tradeSize').value = calculatedSize;
+      }
+    }
+
+    // Calculate max loss
+    let maxLoss = 0;
+    if (stopLoss && stopLoss !== entryPrice) {
+      maxLoss = this.calculateRiskAmount(entryPrice, stopLoss, calculatedSize, direction);
+    }
+
+    // Calculate max gain
+    let maxGain = 0;
+    if (takeProfit && takeProfit !== entryPrice) {
+      const priceDiff = direction === 'long' 
+        ? takeProfit - entryPrice
+        : entryPrice - takeProfit;
+      
+      if (this.mode === 'futures') {
+        const symbol = document.getElementById('tradeSymbol')?.value;
+        const contract = this.contracts[symbol];
+        if (contract) maxGain = priceDiff * contract.pointValue * calculatedSize;
+      } else {
+        maxGain = priceDiff * calculatedSize;
+      }
+    }
+
+    // Update display
+    document.getElementById('riskAmount').textContent = `$${riskAmount.toFixed(2)}`;
+    document.getElementById('calcPositionSize').textContent = calculatedSize;
+    document.getElementById('maxLoss').textContent = `$${maxLoss.toFixed(2)}`;
+    document.getElementById('maxGain').textContent = `$${maxGain.toFixed(2)}`;
+  },
+
+  clearRiskCalculator() {
+    document.getElementById('riskAmount').textContent = '$0.00';
+    document.getElementById('calcPositionSize').textContent = '0';
+    document.getElementById('maxLoss').textContent = '$0.00';
+    document.getElementById('maxGain').textContent = '$0.00';
+  },
+
+  // ===== RISK PANEL =====
+  updateRiskPanel() {
+    const today = new Date().toISOString().split('T')[0];
+    const todayTrades = this.trades.filter(t => t.exitDate?.startsWith(today));
+    const todayPL = todayTrades.reduce((sum, t) => sum + t.pl, 0);
+    const dailyLimit = this.settings.dailyLossLimit;
+    const remaining = dailyLimit + todayPL; // If PL is negative, remaining increases
+
+    document.getElementById('dailyLimit').textContent = `$${dailyLimit.toFixed(2)}`;
+    document.getElementById('dailyUsed').textContent = `$${Math.abs(Math.min(0, todayPL)).toFixed(2)}`;
+    document.getElementById('dailyRemaining').textContent = `$${remaining.toFixed(2)}`;
+
+    const statusEl = document.getElementById('riskStatus');
+    if (remaining <= 0) {
+      statusEl.textContent = '🔴 LOCKED';
+      statusEl.style.color = '#ff4444';
+    } else if (remaining < dailyLimit * 0.2) {
+      statusEl.textContent = '🟡 WARNING';
+      statusEl.style.color = '#ffaa00';
+    } else {
+      statusEl.textContent = '🟢 ACTIVE';
+      statusEl.style.color = '#00ff00';
+    }
+  },
+
+  // ===== ACCOUNT DISPLAY =====
+  updateAccountDisplay() {
+    const balance = this.mode === 'futures' ? this.settings.futuresBalance : this.settings.stocksBalance;
+    const label = this.mode === 'futures' ? 'FUTURES' : 'STOCKS';
+    
+    document.getElementById('accountLabel').textContent = label;
+    document.getElementById('accountBalance').textContent = `$${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  },
+
+  // ===== SETTINGS =====
+  openSettings() {
+    document.getElementById('futuresBalance').value = this.settings.futuresBalance;
+    document.getElementById('stocksBalance').value = this.settings.stocksBalance;
+    document.getElementById('dailyLossLimit').value = this.settings.dailyLossLimit;
+    document.getElementById('maxRiskPerTrade').value = this.settings.maxRiskPerTrade;
+    this.renderWatchlist();
+    document.getElementById('settingsModal').classList.add('active');
+  },
+
+  closeSettings() {
+    document.getElementById('settingsModal').classList.remove('active');
+  },
+
+  saveSettings() {
+    this.settings.futuresBalance = parseFloat(document.getElementById('futuresBalance').value);
+    this.settings.stocksBalance = parseFloat(document.getElementById('stocksBalance').value);
+    this.settings.dailyLossLimit = parseFloat(document.getElementById('dailyLossLimit').value);
+    this.settings.maxRiskPerTrade = parseFloat(document.getElementById('maxRiskPerTrade').value);
+    
+    this.saveAllData();
+    this.updateAccountDisplay();
+    this.updateRiskPanel();
+    this.closeSettings();
+  },
+
+  renderWatchlist() {
+    const manager = document.getElementById('watchlistManager');
+    if (!manager) return;
+
+    manager.innerHTML = this.watchlist.map(symbol => `
+      <div class="watchlist-tag">
+        ${symbol}
+        <span class="remove" onclick="TradingPlanner.removeFromWatchlist('${symbol}')">×</span>
+      </div>
+    `).join('');
+  },
+
+  addToWatchlist() {
+    const symbol = document.getElementById('newWatchlistSymbol').value.toUpperCase().trim();
+    if (!symbol || this.watchlist.includes(symbol)) return;
+    
+    this.watchlist.push(symbol);
+    this.saveAllData();
+    this.renderWatchlist();
+    document.getElementById('newWatchlistSymbol').value = '';
+  },
+
+  removeFromWatchlist(symbol) {
+    this.watchlist = this.watchlist.filter(s => s !== symbol);
+    this.saveAllData();
+    this.renderWatchlist();
+  },
+
+  // ===== JOURNAL =====
+  renderJournal() {
+    this.renderCalendar();
+    this.renderJournalTrades();
+  },
+
+  renderCalendar() {
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    document.getElementById('calendarMonth').textContent = 
+      `${monthNames[this.currentCalendarMonth]} ${this.currentCalendarYear}`;
+
+    const firstDay = new Date(this.currentCalendarYear, this.currentCalendarMonth, 1);
+    const lastDay = new Date(this.currentCalendarYear, this.currentCalendarMonth + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+
+    const grid = document.getElementById('calendarGrid');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+
+    // Day headers
+    const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    dayHeaders.forEach(day => {
+      const header = document.createElement('div');
+      header.style.color = '#888';
+      header.style.fontWeight = 'bold';
+      header.style.textAlign = 'center';
+      header.textContent = day;
+      grid.appendChild(header);
+    });
+
+    // Empty cells for days before month starts
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      const empty = document.createElement('div');
+      empty.className = 'calendar-day';
+      grid.appendChild(empty);
+    }
+
+    // Days of month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${this.currentCalendarYear}-${String(this.currentCalendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dayTrades = this.trades.filter(t => t.date?.startsWith(dateStr) || t.exitDate?.startsWith(dateStr));
+      
+      const dayEl = document.createElement('div');
+      dayEl.className = 'calendar-day';
+      if (dayTrades.length > 0) {
+        dayEl.classList.add('has-trades');
+        dayEl.onclick = () => this.filterJournalByDate(dateStr);
+      }
+
+      dayEl.innerHTML = `
+        <div class="calendar-day-number">${day}</div>
+        ${dayTrades.length > 0 ? `<div class="calendar-day-trades">${dayTrades.length} trade${dayTrades.length > 1 ? 's' : ''}</div>` : ''}
+      `;
+
+      grid.appendChild(dayEl);
+    }
+  },
+
+  changeMonth(delta) {
+    this.currentCalendarMonth += delta;
+    if (this.currentCalendarMonth < 0) {
+      this.currentCalendarMonth = 11;
+      this.currentCalendarYear--;
+    } else if (this.currentCalendarMonth > 11) {
+      this.currentCalendarMonth = 0;
+      this.currentCalendarYear++;
+    }
+    this.renderCalendar();
+  },
+
+  filterJournalByDate(date) {
+    // Filter and highlight trades for selected date
+    this.renderJournalTrades(date);
+  },
+
+  renderJournalTrades(filterDate = null) {
+    const filter = document.getElementById('journalFilter')?.value || 'all';
+    let filteredTrades = [...this.trades];
+
+    // Apply filters
+    if (filter === 'futures') filteredTrades = filteredTrades.filter(t => t.mode === 'futures');
+    else if (filter === 'stocks') filteredTrades = filteredTrades.filter(t => t.mode === 'stocks');
+    else if (filter === 'winners') filteredTrades = filteredTrades.filter(t => t.pl > 0);
+    else if (filter === 'losers') filteredTrades = filteredTrades.filter(t => t.pl < 0);
+
+    // Date filter
+    if (filterDate) {
+      filteredTrades = filteredTrades.filter(t => 
+        t.date?.startsWith(filterDate) || t.exitDate?.startsWith(filterDate)
+      );
+    }
+
+    // Sort by date (newest first)
+    filteredTrades.sort((a, b) => {
+      const dateA = new Date(a.exitDate || a.date);
+      const dateB = new Date(b.exitDate || b.date);
+      return dateB - dateA;
+    });
+
+    const container = document.getElementById('journalTrades');
+    if (!container) return;
+
+    if (filteredTrades.length === 0) {
+      container.innerHTML = '<div class="empty-state">No trades found</div>';
+      return;
+    }
+
+    container.innerHTML = filteredTrades.map(trade => {
+      const plClass = trade.pl >= 0 ? 'profit' : 'loss';
+      const plSign = trade.pl >= 0 ? '+' : '';
+      const date = new Date(trade.exitDate || trade.date);
+      
+      return `
+        <div class="trade-journal-item ${plClass}">
+          <div>
+            <div style="font-weight: bold; color: #00ff00; font-size: 1.25rem;">${trade.symbol}</div>
+            <div style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
+              ${date.toLocaleDateString()} ${date.toLocaleTimeString()}
             </div>
           </div>
-          <div class="trade-details">
-            <div>${trade.direction.toUpperCase()} | ${trade.contracts} ${this.mode === 'futures' ? 'contracts' : 'shares'}</div>
-            <div>Entry: $${trade.entryPrice} → Exit: $${trade.exitPrice}</div>
-            ${trade.setupType ? `<div>Setup: ${trade.setupType}</div>` : ''}
-            ${trade.notes ? `<div class="trade-notes">${trade.notes}</div>` : ''}
-            <div class="trade-date">${new Date(trade.date).toLocaleDateString()}</div>
+          <div style="flex: 1; padding: 0 1rem;">
+            <div style="margin-bottom: 0.5rem;">
+              <span style="color: #888;">Direction:</span> 
+              <span style="color: #00ff00;">${trade.direction.toUpperCase()}</span>
+            </div>
+            <div style="margin-bottom: 0.5rem;">
+              <span style="color: #888;">Entry:</span> 
+              <span style="color: #00ff00;">$${trade.entryPrice.toFixed(2)}</span>
+              <span style="color: #888;"> → Exit:</span> 
+              <span style="color: #00ff00;">$${trade.exitPrice.toFixed(2)}</span>
+            </div>
+            <div style="margin-bottom: 0.5rem;">
+              <span style="color: #888;">Size:</span> 
+              <span style="color: #00ff00;">${trade.contracts || trade.shares} ${trade.contracts ? 'contracts' : 'shares'}</span>
+            </div>
+            ${trade.setupType ? `<div style="margin-bottom: 0.5rem;"><span style="color: #888;">Setup:</span> <span style="color: #00ff00;">${trade.setupType}</span></div>` : ''}
+            ${trade.notes ? `<div style="margin-top: 0.5rem; color: #888; font-size: 0.875rem;">${trade.notes}</div>` : ''}
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 1.5rem; font-weight: bold; color: ${trade.pl >= 0 ? '#00ff00' : '#ff4444'};">
+              ${plSign}$${trade.pl.toFixed(2)}
+            </div>
+            <div style="color: #888; font-size: 0.75rem; margin-top: 0.25rem;">
+              ${((trade.pl / (trade.entryPrice * (trade.contracts || trade.shares))) * 100).toFixed(2)}%
+            </div>
           </div>
         </div>
-      `).join('');
+      `;
+    }).join('');
   },
 
-  setupEventListeners() {
-    const newBtn = document.getElementById('newTradeBtn');
-    const modal = document.getElementById('tradeModal');
-    const closeBtn = document.getElementById('closeTradeModal');
-    const form = document.getElementById('tradeForm');
-    const modeToggle = document.getElementById('modeToggle');
-    
-    if (newBtn) {
-      newBtn.addEventListener('click', () => this.openTradeModal());
-    }
-    
-    if (closeBtn) {
-      closeBtn.addEventListener('click', () => {
-        if (modal) modal.classList.remove('active');
-      });
-    }
-    
-    if (form) {
-      form.addEventListener('input', () => this.updatePLDisplay());
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        this.saveTrade();
-      });
-    }
-    
-    if (modeToggle) {
-      modeToggle.addEventListener('click', () => {
-        this.mode = this.mode === 'futures' ? 'stocks' : 'futures';
-        modeToggle.textContent = `Mode: ${this.mode.charAt(0).toUpperCase() + this.mode.slice(1)}`;
-        this.saveTrades();
-        this.render();
-      });
-    }
-    
-    if (modal) {
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-          modal.classList.remove('active');
-        }
-      });
-    }
+  // ===== PLANNER =====
+  renderPlanner() {
+    this.renderPlannedTrades();
+    this.renderKeyLevels();
   },
 
-  updatePLDisplay() {
-    const entry = parseFloat(document.getElementById('entryPrice').value) || 0;
-    const exit = parseFloat(document.getElementById('exitPrice').value) || 0;
-    const contracts = parseInt(document.getElementById('contracts').value) || 0;
-    const direction = document.getElementById('tradeDirection').value;
-    const symbol = document.getElementById('tradeSymbol').value.toUpperCase();
-    
-    if (entry && exit && contracts) {
-      let pl = 0;
-      if (this.mode === 'futures') {
-        const contract = this.contracts[symbol] || { pointValue: 5 };
-        const priceDiff = direction === 'long' ? exit - entry : entry - exit;
-        pl = priceDiff * contract.pointValue * contracts;
-      } else {
-        const priceDiff = direction === 'long' ? exit - entry : entry - exit;
-        pl = priceDiff * contracts;
-      }
-      
-      const plDisplay = document.getElementById('plDisplay');
-      if (plDisplay) {
-        plDisplay.textContent = `P&L: ${pl >= 0 ? '+' : ''}$${pl.toFixed(2)}`;
-        plDisplay.style.color = pl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
-      }
+  renderPlannedTrades() {
+    const list = document.getElementById('plannedTradesList');
+    if (!list) return;
+
+    if (this.plannedTrades.length === 0) {
+      list.innerHTML = '<div class="empty-state">No planned trades</div>';
+      return;
     }
+
+    list.innerHTML = this.plannedTrades.map(trade => `
+      <div class="planned-trade-item">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+          <strong style="color: #00ff00;">${trade.symbol}</strong>
+          <button class="btn-terminal btn-sm" onclick="TradingPlanner.removePlannedTrade('${trade.id}')">REMOVE</button>
+        </div>
+        <div style="color: #888; font-size: 0.875rem;">
+          ${trade.direction.toUpperCase()} | Entry: $${trade.entryPrice} | Stop: $${trade.stopLoss} | Target: $${trade.target}
+        </div>
+        ${trade.notes ? `<div style="color: #888; font-size: 0.875rem; margin-top: 0.5rem;">${trade.notes}</div>` : ''}
+      </div>
+    `).join('');
   },
 
-  openTradeModal(tradeId = null) {
-    const modal = document.getElementById('tradeModal');
-    const title = document.getElementById('tradeModalTitle');
-    const form = document.getElementById('tradeForm');
-    
-    if (tradeId !== null) {
-      const trade = this.trades.find(t => t.id === tradeId);
-      if (trade) {
-        document.getElementById('tradeId').value = trade.id;
-        document.getElementById('tradeSymbol').value = trade.symbol;
-        document.getElementById('entryPrice').value = trade.entryPrice;
-        document.getElementById('exitPrice').value = trade.exitPrice;
-        document.getElementById('contracts').value = trade.contracts;
-        document.getElementById('tradeDirection').value = trade.direction;
-        document.getElementById('setupType').value = trade.setupType || '';
-        document.getElementById('tradeNotes').value = trade.notes || '';
-        if (title) title.textContent = 'Edit Trade';
-      }
-    } else {
-      form.reset();
-      document.getElementById('tradeId').value = '';
-      if (title) title.textContent = 'New Trade';
+  renderKeyLevels() {
+    const list = document.getElementById('keyLevelsList');
+    if (!list) return;
+
+    if (this.keyLevels.length === 0) {
+      list.innerHTML = '<div class="empty-state">No key levels</div>';
+      return;
     }
-    
-    if (modal) modal.classList.add('active');
-    this.updatePLDisplay();
+
+    list.innerHTML = this.keyLevels.map(level => `
+      <div class="key-level-item">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+          <strong style="color: #00ff00;">${level.symbol} - $${level.price}</strong>
+          <button class="btn-terminal btn-sm" onclick="TradingPlanner.removeKeyLevel('${level.id}')">REMOVE</button>
+        </div>
+        <div style="color: #888; font-size: 0.875rem;">
+          ${level.type.toUpperCase()} | ${level.notes || ''}
+        </div>
+      </div>
+    `).join('');
   },
 
-  saveTrade() {
-    const id = document.getElementById('tradeId').value;
-    const symbol = document.getElementById('tradeSymbol').value.toUpperCase();
-    const entryPrice = parseFloat(document.getElementById('entryPrice').value);
-    const exitPrice = parseFloat(document.getElementById('exitPrice').value);
-    const contracts = parseInt(document.getElementById('contracts').value);
-    const direction = document.getElementById('tradeDirection').value;
-    const setupType = document.getElementById('setupType').value;
-    const notes = document.getElementById('tradeNotes').value;
+  addPlannedTrade() {
+    const symbol = prompt('Symbol:');
+    if (!symbol) return;
     
-    const pl = this.calculatePL({
-      symbol, entryPrice, exitPrice, contracts, direction
+    const entryPrice = parseFloat(prompt('Entry Price:'));
+    if (!entryPrice) return;
+    
+    const direction = prompt('Direction (long/short):') || 'long';
+    const stopLoss = parseFloat(prompt('Stop Loss:') || '0') || null;
+    const target = parseFloat(prompt('Target:') || '0') || null;
+    const notes = prompt('Notes:') || '';
+
+    this.plannedTrades.push({
+      id: Date.now().toString(),
+      symbol: symbol.toUpperCase(),
+      direction: direction.toLowerCase(),
+      entryPrice,
+      stopLoss,
+      target,
+      notes,
+      date: new Date().toISOString()
     });
+
+    this.saveAllData();
+    this.renderPlannedTrades();
+  },
+
+  removePlannedTrade(id) {
+    this.plannedTrades = this.plannedTrades.filter(t => t.id !== id);
+    this.saveAllData();
+    this.renderPlannedTrades();
+  },
+
+  addKeyLevel() {
+    const symbol = prompt('Symbol:');
+    if (!symbol) return;
     
-    if (id) {
-      const trade = this.trades.find(t => t.id === parseInt(id));
-      if (trade) {
-        Object.assign(trade, {
-          symbol, entryPrice, exitPrice, contracts, direction, setupType, notes, pl
-        });
-      }
-    } else {
-      const newTrade = {
-        id: Date.now(),
-        symbol,
-        entryPrice,
-        exitPrice,
-        contracts,
-        direction,
-        setupType,
-        notes,
-        pl,
-        date: new Date().toISOString()
-      };
-      this.trades.push(newTrade);
+    const price = parseFloat(prompt('Price:'));
+    if (!price) return;
+    
+    const type = prompt('Type (support/resistance):') || 'support';
+    const notes = prompt('Notes:') || '';
+
+    this.keyLevels.push({
+      id: Date.now().toString(),
+      symbol: symbol.toUpperCase(),
+      price,
+      type: type.toLowerCase(),
+      notes,
+      date: new Date().toISOString()
+    });
+
+    this.saveAllData();
+    this.renderKeyLevels();
+  },
+
+  removeKeyLevel(id) {
+    this.keyLevels = this.keyLevels.filter(l => l.id !== id);
+    this.saveAllData();
+    this.renderKeyLevels();
+  },
+
+  // ===== ANALYTICS =====
+  renderAnalytics() {
+    this.calculateAnalytics();
+    this.renderEquityCurve();
+    this.renderPerformanceTables();
+  },
+
+  calculateAnalytics() {
+    if (this.trades.length === 0) {
+      document.getElementById('analyticsTotalPL').textContent = '$0.00';
+      document.getElementById('analyticsWinRate').textContent = '0%';
+      document.getElementById('analyticsAvgWin').textContent = '$0.00';
+      document.getElementById('analyticsAvgLoss').textContent = '$0.00';
+      document.getElementById('analyticsProfitFactor').textContent = '0.00';
+      document.getElementById('analyticsMaxDD').textContent = '$0.00';
+      return;
     }
+
+    const totalPL = this.trades.reduce((sum, t) => sum + t.pl, 0);
+    const winners = this.trades.filter(t => t.pl > 0);
+    const losers = this.trades.filter(t => t.pl < 0);
+    const winRate = (winners.length / this.trades.length) * 100;
+    const avgWin = winners.length > 0 ? winners.reduce((sum, t) => sum + t.pl, 0) / winners.length : 0;
+    const avgLoss = losers.length > 0 ? Math.abs(losers.reduce((sum, t) => sum + t.pl, 0) / losers.length) : 0;
+    const profitFactor = avgLoss > 0 ? (winners.reduce((sum, t) => sum + t.pl, 0) / losers.reduce((sum, t) => sum + Math.abs(t.pl), 0)) : 0;
+
+    // Calculate max drawdown
+    let maxDD = 0;
+    let peak = 0;
+    let runningPL = 0;
+    this.trades.sort((a, b) => new Date(a.exitDate || a.date) - new Date(b.exitDate || b.date));
+    this.trades.forEach(trade => {
+      runningPL += trade.pl;
+      if (runningPL > peak) peak = runningPL;
+      const drawdown = peak - runningPL;
+      if (drawdown > maxDD) maxDD = drawdown;
+    });
+
+    document.getElementById('analyticsTotalPL').textContent = `$${totalPL >= 0 ? '+' : ''}${totalPL.toFixed(2)}`;
+    document.getElementById('analyticsTotalPL').style.color = totalPL >= 0 ? '#00ff00' : '#ff4444';
+    document.getElementById('analyticsWinRate').textContent = `${winRate.toFixed(1)}%`;
+    document.getElementById('analyticsAvgWin').textContent = `$${avgWin.toFixed(2)}`;
+    document.getElementById('analyticsAvgLoss').textContent = `$${avgLoss.toFixed(2)}`;
+    document.getElementById('analyticsProfitFactor').textContent = profitFactor.toFixed(2);
+    document.getElementById('analyticsMaxDD').textContent = `$${maxDD.toFixed(2)}`;
+  },
+
+  renderEquityCurve() {
+    const canvas = document.getElementById('equityCurveChart');
+    if (!canvas || this.trades.length === 0) return;
+
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth;
+    canvas.height = 300;
+
+    // Sort trades by date
+    const sortedTrades = [...this.trades].sort((a, b) => 
+      new Date(a.exitDate || a.date) - new Date(b.exitDate || b.date)
+    );
+
+    // Calculate equity curve
+    let runningPL = 0;
+    const equityPoints = sortedTrades.map(trade => {
+      runningPL += trade.pl;
+      return runningPL;
+    });
+
+    if (equityPoints.length === 0) return;
+
+    const maxPL = Math.max(...equityPoints, 0);
+    const minPL = Math.min(...equityPoints, 0);
+    const range = maxPL - minPL || 1;
+    const padding = 20;
+    const width = canvas.width - padding * 2;
+    const height = canvas.height - padding * 2;
+
+    // Clear canvas
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw grid
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 5; i++) {
+      const y = padding + (height / 5) * i;
+      ctx.beginPath();
+      ctx.moveTo(padding, y);
+      ctx.lineTo(canvas.width - padding, y);
+      ctx.stroke();
+    }
+
+    // Draw equity curve
+    ctx.strokeStyle = '#00ff00';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    equityPoints.forEach((pl, index) => {
+      const x = padding + (width / (equityPoints.length - 1 || 1)) * index;
+      const y = padding + height - ((pl - minPL) / range) * height;
+      if (index === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+    ctx.stroke();
+
+    // Draw zero line
+    if (minPL < 0 && maxPL > 0) {
+      const zeroY = padding + height - ((0 - minPL) / range) * height;
+      ctx.strokeStyle = '#888';
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(padding, zeroY);
+      ctx.lineTo(canvas.width - padding, zeroY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  },
+
+  renderPerformanceTables() {
+    // Setup performance
+    const setupStats = {};
+    this.trades.forEach(trade => {
+      const setup = trade.setupType || 'Other';
+      if (!setupStats[setup]) {
+        setupStats[setup] = { count: 0, totalPL: 0, wins: 0 };
+      }
+      setupStats[setup].count++;
+      setupStats[setup].totalPL += trade.pl;
+      if (trade.pl > 0) setupStats[setup].wins++;
+    });
+
+    const setupTable = document.getElementById('setupPerformanceTable');
+    if (setupTable) {
+      setupTable.innerHTML = `
+        <thead>
+          <tr>
+            <th>Setup</th>
+            <th>Trades</th>
+            <th>Win Rate</th>
+            <th>P&L</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Object.entries(setupStats).map(([setup, stats]) => `
+            <tr>
+              <td>${setup}</td>
+              <td>${stats.count}</td>
+              <td>${((stats.wins / stats.count) * 100).toFixed(1)}%</td>
+              <td style="color: ${stats.totalPL >= 0 ? '#00ff00' : '#ff4444'}">
+                ${stats.totalPL >= 0 ? '+' : ''}$${stats.totalPL.toFixed(2)}
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      `;
+    }
+
+    // Symbol performance
+    const symbolStats = {};
+    this.trades.forEach(trade => {
+      const symbol = trade.symbol;
+      if (!symbolStats[symbol]) {
+        symbolStats[symbol] = { count: 0, totalPL: 0, wins: 0 };
+      }
+      symbolStats[symbol].count++;
+      symbolStats[symbol].totalPL += trade.pl;
+      if (trade.pl > 0) symbolStats[symbol].wins++;
+    });
+
+    const symbolTable = document.getElementById('symbolPerformanceTable');
+    if (symbolTable) {
+      symbolTable.innerHTML = `
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Trades</th>
+            <th>Win Rate</th>
+            <th>P&L</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Object.entries(symbolStats).map(([symbol, stats]) => `
+            <tr>
+              <td>${symbol}</td>
+              <td>${stats.count}</td>
+              <td>${((stats.wins / stats.count) * 100).toFixed(1)}%</td>
+              <td style="color: ${stats.totalPL >= 0 ? '#00ff00' : '#ff4444'}">
+                ${stats.totalPL >= 0 ? '+' : ''}$${stats.totalPL.toFixed(2)}
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      `;
+    }
+  },
+
+  // ===== PLAYBOOK =====
+  renderPlaybook() {
+    this.renderExecutionStages();
+    this.renderPsychology();
+  },
+
+  renderExecutionStages() {
+    const stages = ['pre-market', 'setup', 'entry', 'management', 'exit', 'review'];
+    stages.forEach(stage => {
+      const checkbox = document.getElementById(`stage${stages.indexOf(stage) + 1}`);
+      if (checkbox) {
+        checkbox.checked = this.executionStages[stage] || false;
+      }
+    });
+  },
+
+  renderPsychology() {
+    const container = document.getElementById('psychologyHistory');
+    if (!container) return;
+
+    if (this.psychology.length === 0) {
+      container.innerHTML = '<div class="empty-state">No psychology entries</div>';
+      return;
+    }
+
+    container.innerHTML = this.psychology.slice(-10).reverse().map(entry => {
+      const date = new Date(entry.date);
+      return `
+        <div class="psychology-entry">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <strong style="color: #00ff00;">${entry.state}</strong>
+            <span style="color: #888; font-size: 0.75rem;">${date.toLocaleString()}</span>
+          </div>
+          ${entry.notes ? `<div style="color: #888;">${entry.notes}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+  },
+
+  savePsychology() {
+    const state = document.getElementById('emotionalState').value;
+    const notes = document.getElementById('psychologyNotes').value;
+
+    if (!state) return;
+
+    this.psychology.push({
+      id: Date.now().toString(),
+      state,
+      notes,
+      date: new Date().toISOString()
+    });
+
+    this.saveAllData();
+    document.getElementById('psychologyNotes').value = '';
+    this.renderPsychology();
+  },
+
+  // ===== TRADINGVIEW =====
+  initTradingView() {
+    this.updateTradingView();
+  },
+
+  updateTradingView() {
+    const symbol = document.getElementById('chartSymbol')?.value || 'MES';
+    const timeframe = document.getElementById('chartTimeframe')?.value || '60';
     
-    this.saveTrades();
-    this.render();
-    document.getElementById('tradeModal').classList.remove('active');
+    // Map symbols to TradingView format
+    const symbolMap = {
+      'MES': 'CME_MINI:ES1!',
+      'MNQ': 'CME_MINI:NQ1!',
+      'PL': 'NYMEX:PL1!',
+      'SIL': 'COMEX:SI1!'
+    };
+
+    const tvSymbol = symbolMap[symbol] || symbolMap['MES'];
+    const container = document.getElementById('tradingview-chart');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    new TradingView.widget({
+      autosize: true,
+      symbol: tvSymbol,
+      interval: timeframe,
+      timezone: 'America/New_York',
+      theme: 'dark',
+      style: '1',
+      locale: 'en',
+      toolbar_bg: '#000000',
+      enable_publishing: false,
+      hide_top_toolbar: true,
+      hide_legend: false,
+      save_image: false,
+      container_id: 'tradingview-chart',
+      studies: []
+    });
+  },
+
+  // ===== UTILITY =====
+  focusTradeEntry() {
+    this.switchTab('terminal');
+    document.getElementById('tradeSymbol')?.focus();
   }
 };
 
-// Initialize
+// Initialize on DOM load
 document.addEventListener('DOMContentLoaded', () => {
   const savedTheme = localStorage.getItem('hubTheme') || 'cosmic';
   document.body.setAttribute('data-theme', savedTheme);
