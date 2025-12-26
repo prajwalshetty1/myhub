@@ -41,7 +41,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes (unauthenticated)
-app.use('/api/trading', require('./routes/trading'));
 app.use('/api/hub', require('./routes/hub'));
 app.use('/api/journal', require('./routes/journal'));
 
