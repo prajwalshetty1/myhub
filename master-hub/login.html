@@ -86,6 +86,22 @@
   <script>
     let isLogin = true;
 
+    // Wait for API client to be ready
+    function waitForAPI() {
+      return new Promise((resolve) => {
+        if (window.API) {
+          resolve();
+        } else {
+          const checkInterval = setInterval(() => {
+            if (window.API) {
+              clearInterval(checkInterval);
+              resolve();
+            }
+          }, 100);
+        }
+      });
+    }
+
     function renderForm() {
       const container = document.getElementById('loginFormContainer');
       container.innerHTML = `
@@ -93,12 +109,12 @@
           ${!isLogin ? `
             <div class="form-group">
               <label class="form-label">Name</label>
-              <input type="text" id="name" class="form-input" placeholder="Your Name">
+              <input type="text" id="name" class="form-input" placeholder="Your Name" required>
             </div>
           ` : ''}
           <div class="form-group">
-            <label class="form-label">Username or Email</label>
-            <input type="text" id="username" class="form-input" placeholder="Username or Email" required>
+            <label class="form-label">${isLogin ? 'Username or Email' : 'Username'}</label>
+            <input type="text" id="username" class="form-input" placeholder="${isLogin ? 'Username or Email' : 'Username'}" required>
           </div>
           ${!isLogin ? `
             <div class="form-group">
@@ -108,20 +124,23 @@
           ` : ''}
           <div class="form-group">
             <label class="form-label">Password</label>
-            <input type="password" id="password" class="form-input" placeholder="Password" required>
+            <input type="password" id="password" class="form-input" placeholder="Password" required minlength="6">
           </div>
           <div id="errorMessage" class="error-message"></div>
-          <button type="submit" class="btn btn-primary" style="width: 100%;">
+          <button type="submit" class="btn btn-primary" style="width: 100%;" id="submitBtn">
             ${isLogin ? 'Login' : 'Register'}
           </button>
         </form>
         <div class="login-toggle">
           ${isLogin ? 'Don\'t have an account? ' : 'Already have an account? '}
-          <a onclick="toggleForm()">${isLogin ? 'Register' : 'Login'}</a>
+          <a onclick="toggleForm()" style="cursor: pointer;">${isLogin ? 'Register' : 'Login'}</a>
         </div>
       `;
 
-      document.getElementById('authForm').addEventListener('submit', handleSubmit);
+      const form = document.getElementById('authForm');
+      if (form) {
+        form.addEventListener('submit', handleSubmit);
+      }
     }
 
     function toggleForm() {
@@ -132,51 +151,117 @@
     async function handleSubmit(e) {
       e.preventDefault();
       const errorEl = document.getElementById('errorMessage');
+      const submitBtn = document.getElementById('submitBtn');
+      
+      if (!errorEl) return;
+      
       errorEl.textContent = '';
-
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
+      
+      // Disable button during submission
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = isLogin ? 'Logging in...' : 'Registering...';
+      }
 
       try {
+        // Wait for API to be ready
+        await waitForAPI();
+
         if (isLogin) {
+          const username = document.getElementById('username').value.trim();
+          const password = document.getElementById('password').value;
+
+          if (!username || !password) {
+            throw new Error('Please fill in all fields');
+          }
+
           const data = await window.API.login(username, password);
-          if (data.token) {
-            window.location.href = '/index.html';
+          if (data && data.token) {
+            window.API.setToken(data.token);
+            window.location.href = './index.html';
+          } else {
+            throw new Error('Login failed - no token received');
           }
         } else {
-          const name = document.getElementById('name').value;
-          const email = document.getElementById('email').value;
+          const name = document.getElementById('name').value.trim();
+          const username = document.getElementById('username').value.trim();
+          const email = document.getElementById('email').value.trim();
+          const password = document.getElementById('password').value;
+
+          if (!name || !username || !email || !password) {
+            throw new Error('Please fill in all fields');
+          }
+
+          if (password.length < 6) {
+            throw new Error('Password must be at least 6 characters');
+          }
+
+          if (!email.includes('@')) {
+            throw new Error('Please enter a valid email address');
+          }
+
           const data = await window.API.register(username, email, password, name);
-          if (data.token) {
+          if (data && data.token) {
             window.API.setToken(data.token);
-            window.location.href = '/index.html';
+            window.location.href = './index.html';
+          } else {
+            throw new Error('Registration failed - no token received');
           }
         }
       } catch (error) {
-        errorEl.textContent = error.message || 'Authentication failed';
+        console.error('Auth error:', error);
+        errorEl.textContent = error.message || 'Authentication failed. Please try again.';
+        errorEl.style.display = 'block';
+        
+        // Re-enable button
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = isLogin ? 'Login' : 'Register';
+        }
       }
     }
 
-    // Check if already logged in
-    if (window.API.token) {
-      window.location.href = '/index.html';
+    // Initialize
+    async function init() {
+      // Wait for API client
+      await waitForAPI();
+
+      // Check if already logged in
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        try {
+          const user = await window.API.getCurrentUser();
+          if (user && user.user) {
+            window.location.href = './index.html';
+            return;
+          }
+        } catch (error) {
+          // Token invalid, continue to login
+          localStorage.removeItem('authToken');
+        }
+      }
+
+      // Initialize starfield
+      const starfield = document.getElementById('starfield');
+      if (starfield) {
+        for (let i = 0; i < 100; i++) {
+          const star = document.createElement('div');
+          star.className = 'star';
+          star.style.left = Math.random() * 100 + '%';
+          star.style.top = Math.random() * 100 + '%';
+          star.style.width = Math.random() * 3 + 1 + 'px';
+          star.style.height = star.style.width;
+          star.style.animationDuration = Math.random() * 3 + 2 + 's';
+          star.style.animationDelay = Math.random() * 2 + 's';
+          starfield.appendChild(star);
+        }
+      }
+
+      renderForm();
     }
 
-    // Initialize starfield
-    const starfield = document.getElementById('starfield');
-    for (let i = 0; i < 100; i++) {
-      const star = document.createElement('div');
-      star.className = 'star';
-      star.style.left = Math.random() * 100 + '%';
-      star.style.top = Math.random() * 100 + '%';
-      star.style.width = Math.random() * 3 + 1 + 'px';
-      star.style.height = star.style.width;
-      star.style.animationDuration = Math.random() * 3 + 2 + 's';
-      star.style.animationDelay = Math.random() * 2 + 's';
-      starfield.appendChild(star);
-    }
-
-    renderForm();
+    // Start initialization
+    init();
   </script>
 </body>
 </html>

@@ -57,22 +57,42 @@ class APIClient {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
+      
+      // Check if response has content
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error(text || 'Request failed');
+        }
+      }
 
       if (!response.ok) {
         if (response.status === 401) {
           // Token expired or invalid
           this.setToken(null);
-          window.location.href = '/login.html';
+          // Only redirect if not already on login page
+          if (!window.location.pathname.includes('login.html')) {
+            window.location.href = './login.html';
+          }
           throw new Error('Authentication required');
         }
-        throw new Error(data.error || 'Request failed');
+        throw new Error(data.error || `Request failed: ${response.status} ${response.statusText}`);
       }
 
       return data;
     } catch (error) {
       console.error('API request failed:', error);
-      throw error;
+      // Re-throw with better error message
+      if (error.message) {
+        throw error;
+      }
+      throw new Error('Network error. Please check your connection and try again.');
     }
   }
 
