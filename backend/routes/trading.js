@@ -110,10 +110,10 @@ router.post('/positions', async (req, res) => {
   try {
     const { symbol, direction, entryPrice, size, stopLoss, takeProfit, currentPrice, setupType, mode } = req.body;
     const result = await pool.query(
-      `INSERT INTO trading_positions (symbol, direction, entry_price, size, stop_loss, take_profit, current_price, setup_type, mode)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO trading_positions (user_id, symbol, direction, entry_price, size, stop_loss, take_profit, current_price, setup_type, mode)
+       VALUES (NULL, $1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [null, symbol, direction, entryPrice, size, stopLoss || null, takeProfit || null, currentPrice || entryPrice, setupType || null, mode || 'futures']
+      [symbol, direction, entryPrice, size, stopLoss || null, takeProfit || null, currentPrice || entryPrice, setupType || null, mode || 'futures']
     );
     res.json(result.rows[0]);
   } catch (error) {
@@ -189,16 +189,16 @@ router.post('/settings', async (req, res) => {
   try {
     const { futuresBalance, stocksBalance, dailyLossLimit, maxRiskPerTrade } = req.body;
     const result = await pool.query(
-      `INSERT INTO trading_settings (futures_balance, stocks_balance, daily_loss_limit, max_risk_per_trade)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT () DO UPDATE SET
+      `INSERT INTO trading_settings (user_id, futures_balance, stocks_balance, daily_loss_limit, max_risk_per_trade)
+       VALUES (NULL, $1, $2, $3, $4)
+       ON CONFLICT (user_id) DO UPDATE SET
          futures_balance = $1,
          stocks_balance = $2,
          daily_loss_limit = $3,
          max_risk_per_trade = $4,
          updated_at = CURRENT_TIMESTAMP
        RETURNING *`,
-      [null, futuresBalance, stocksBalance, dailyLossLimit, maxRiskPerTrade]
+      [futuresBalance, stocksBalance, dailyLossLimit, maxRiskPerTrade]
     );
     res.json(result.rows[0]);
   } catch (error) {
@@ -259,10 +259,10 @@ router.post('/planned-trades', async (req, res) => {
   try {
     const { symbol, direction, entryPrice, stopLoss, target, notes } = req.body;
     const result = await pool.query(
-      `INSERT INTO trading_planned_trades (symbol, direction, entry_price, stop_loss, target, notes)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO trading_planned_trades (user_id, symbol, direction, entry_price, stop_loss, target, notes)
+       VALUES (NULL, $1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [null, symbol, direction, entryPrice, stopLoss || null, target || null, notes || null]
+      [symbol, direction, entryPrice, stopLoss || null, target || null, notes || null]
     );
     res.json(result.rows[0]);
   } catch (error) {
