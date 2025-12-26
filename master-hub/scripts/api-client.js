@@ -394,6 +394,28 @@ class APIClient {
   }
 
   // Watchlist
+  // Daily Notes
+  async getDailyNotes() {
+    return this.request('/trading/daily-notes');
+  }
+
+  async getDailyNote(date) {
+    return this.request(`/trading/daily-notes/${date}`);
+  }
+
+  async saveDailyNote(date, notes) {
+    return this.request('/trading/daily-notes', {
+      method: 'POST',
+      body: JSON.stringify({ date, notes })
+    });
+  }
+
+  async deleteDailyNote(date) {
+    return this.request(`/trading/daily-notes/${date}`, {
+      method: 'DELETE'
+    });
+  }
+
   async getWatchlist() {
     return this.request('/trading/watchlist');
   }

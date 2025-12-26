@@ -959,7 +959,21 @@ const TradingPlanner = {
     
     // Load notes for selected date
     if (notesTextarea) {
-      notesTextarea.value = this.dailyNotes[dateStr] || '';
+      // Try to load from cache first, then fetch from API if not found
+      if (this.dailyNotes[dateStr] !== undefined) {
+        notesTextarea.value = this.dailyNotes[dateStr] || '';
+      } else {
+        // Fetch from API
+        window.API.getDailyNote(dateStr).then(note => {
+          const notes = note.notes || '';
+          this.dailyNotes[dateStr] = notes;
+          notesTextarea.value = notes;
+        }).catch(error => {
+          // If note doesn't exist, that's fine
+          this.dailyNotes[dateStr] = '';
+          notesTextarea.value = '';
+        });
+      }
     }
     
     // Highlight selected date
@@ -978,26 +992,38 @@ const TradingPlanner = {
     }
     
     const notes = document.getElementById('dailyNotes').value;
-    this.dailyNotes[this.selectedDate] = notes;
     
-    // Save to localStorage for now (can be migrated to API later)
-    localStorage.setItem('tradingDailyNotes', JSON.stringify(this.dailyNotes));
-    
-    // Show success feedback
-    const btn = document.getElementById('saveDailyNotesBtn');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '✓ Saved';
-    btn.style.background = '#4ade80';
-    setTimeout(() => {
-      btn.innerHTML = originalText;
-      btn.style.background = '';
-    }, 2000);
+    try {
+      await window.API.saveDailyNote(this.selectedDate, notes);
+      this.dailyNotes[this.selectedDate] = notes;
+      
+      // Show success feedback
+      const btn = document.getElementById('saveDailyNotesBtn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '✓ Saved';
+      btn.style.background = '#4ade80';
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.style.background = '';
+      }, 2000);
+    } catch (error) {
+      console.error('Error saving daily notes:', error);
+      alert('Failed to save notes. Please try again.');
+    }
   },
 
-  loadDailyNotes() {
-    const saved = localStorage.getItem('tradingDailyNotes');
-    if (saved) {
-      this.dailyNotes = JSON.parse(saved);
+  async loadDailyNotes() {
+    try {
+      const notes = await window.API.getDailyNotes();
+      // Convert array to object keyed by date
+      this.dailyNotes = {};
+      notes.forEach(note => {
+        this.dailyNotes[note.date] = note.notes || '';
+      });
+    } catch (error) {
+      console.error('Error loading daily notes:', error);
+      // Fallback to empty object
+      this.dailyNotes = {};
     }
   },
 

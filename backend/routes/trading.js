@@ -436,4 +436,80 @@ router.post('/watchlist', authenticateToken, async (req, res) => {
   }
 });
 
+// ===== DAILY NOTES =====
+// Get all daily notes
+router.get('/daily-notes', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM trading_daily_notes WHERE user_id = $1 ORDER BY date DESC',
+      [req.user.userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching daily notes:', error);
+    res.status(500).json({ error: 'Failed to fetch daily notes' });
+  }
+});
+
+// Get daily note by date
+router.get('/daily-notes/:date', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM trading_daily_notes WHERE user_id = $1 AND date = $2',
+      [req.user.userId, req.params.date]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Daily note not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching daily note:', error);
+    res.status(500).json({ error: 'Failed to fetch daily note' });
+  }
+});
+
+// Create or update daily note
+router.post('/daily-notes', authenticateToken, async (req, res) => {
+  try {
+    const { date, notes } = req.body;
+    
+    if (!date) {
+      return res.status(400).json({ error: 'Date is required' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO trading_daily_notes (user_id, date, notes)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id, date)
+       DO UPDATE SET notes = $3, updated_at = CURRENT_TIMESTAMP
+       RETURNING *`,
+      [req.user.userId, date, notes || '']
+    );
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error saving daily note:', error);
+    res.status(500).json({ error: 'Failed to save daily note' });
+  }
+});
+
+// Delete daily note
+router.delete('/daily-notes/:date', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM trading_daily_notes WHERE user_id = $1 AND date = $2 RETURNING *',
+      [req.user.userId, req.params.date]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Daily note not found' });
+    }
+    
+    res.json({ message: 'Daily note deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting daily note:', error);
+    res.status(500).json({ error: 'Failed to delete daily note' });
+  }
+});
+
 module.exports = router;
