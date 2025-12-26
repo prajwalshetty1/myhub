@@ -57,23 +57,13 @@ const AdvancedJournal = {
   },
 
   getClient() {
-    // Always use Supabase Direct Client for localhost/127.0.0.1
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      if (window.SupabaseClient) {
-        console.log('✅ Using Supabase Direct Client (Local Development)');
-        return window.SupabaseClient;
-      } else {
-        console.warn('⚠️ SupabaseClient not found! Make sure supabase-client.js is loaded.');
-      }
-    }
-    
-    // Use backend API for production
+    // Always use Backend API (for both local and production)
     if (window.API) {
-      console.log('✅ Using Backend API Client (Production)');
+      console.log('✅ Using Backend API Client');
       return window.API;
     }
     
-    console.error('❌ No API client available!');
+    console.error('❌ API client not available!');
     return null;
   },
 
