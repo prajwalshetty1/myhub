@@ -9,7 +9,8 @@ if (process.env.DATABASE_URL) {
   // Supabase provides DATABASE_URL connection string
   poolConfig = {
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    // Always use SSL for Supabase (production or preview)
+    ssl: process.env.DATABASE_URL.includes('supabase') ? { rejectUnauthorized: false } : (process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false),
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,
@@ -22,7 +23,7 @@ if (process.env.DATABASE_URL) {
     database: process.env.DB_NAME || 'myhub',
     user: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || '',
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    ssl: process.env.DB_HOST?.includes('supabase') || process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,
