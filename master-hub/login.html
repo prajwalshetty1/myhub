@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - My Hub</title>
+  <link rel="stylesheet" href="hub.css">
+  <style>
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--spacing-xl);
+    }
+    .login-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-2xl);
+      width: 100%;
+      max-width: 400px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .login-title {
+      text-align: center;
+      margin-bottom: var(--spacing-xl);
+      font-size: var(--font-size-3xl);
+    }
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-sm);
+    }
+    .form-label {
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+    }
+    .form-input {
+      padding: var(--spacing-md);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-family: var(--font-primary);
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .error-message {
+      color: var(--accent-red);
+      font-size: var(--font-size-sm);
+      margin-top: var(--spacing-sm);
+    }
+    .login-toggle {
+      text-align: center;
+      margin-top: var(--spacing-md);
+      color: var(--text-secondary);
+    }
+    .login-toggle a {
+      color: var(--accent-primary);
+      cursor: pointer;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body data-theme="cosmic">
+  <div class="starfield" id="starfield"></div>
+  <div class="login-container">
+    <div class="login-card">
+      <h1 class="login-title">∞ My Hub</h1>
+      <div id="loginFormContainer">
+        <!-- Login/Register form will be inserted here -->
+      </div>
+    </div>
+  </div>
+
+  <script src="scripts/api-client.js"></script>
+  <script>
+    let isLogin = true;
+
+    function renderForm() {
+      const container = document.getElementById('loginFormContainer');
+      container.innerHTML = `
+        <form id="authForm" class="login-form">
+          ${!isLogin ? `
+            <div class="form-group">
+              <label class="form-label">Name</label>
+              <input type="text" id="name" class="form-input" placeholder="Your Name">
+            </div>
+          ` : ''}
+          <div class="form-group">
+            <label class="form-label">Username or Email</label>
+            <input type="text" id="username" class="form-input" placeholder="Username or Email" required>
+          </div>
+          ${!isLogin ? `
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" id="email" class="form-input" placeholder="Email" required>
+            </div>
+          ` : ''}
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" id="password" class="form-input" placeholder="Password" required>
+          </div>
+          <div id="errorMessage" class="error-message"></div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">
+            ${isLogin ? 'Login' : 'Register'}
+          </button>
+        </form>
+        <div class="login-toggle">
+          ${isLogin ? 'Don\'t have an account? ' : 'Already have an account? '}
+          <a onclick="toggleForm()">${isLogin ? 'Register' : 'Login'}</a>
+        </div>
+      `;
+
+      document.getElementById('authForm').addEventListener('submit', handleSubmit);
+    }
+
+    function toggleForm() {
+      isLogin = !isLogin;
+      renderForm();
+    }
+
+    async function handleSubmit(e) {
+      e.preventDefault();
+      const errorEl = document.getElementById('errorMessage');
+      errorEl.textContent = '';
+
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        if (isLogin) {
+          const data = await window.API.login(username, password);
+          if (data.token) {
+            window.location.href = '/index.html';
+          }
+        } else {
+          const name = document.getElementById('name').value;
+          const email = document.getElementById('email').value;
+          const data = await window.API.register(username, email, password, name);
+          if (data.token) {
+            window.API.setToken(data.token);
+            window.location.href = '/index.html';
+          }
+        }
+      } catch (error) {
+        errorEl.textContent = error.message || 'Authentication failed';
+      }
+    }
+
+    // Check if already logged in
+    if (window.API.token) {
+      window.location.href = '/index.html';
+    }
+
+    // Initialize starfield
+    const starfield = document.getElementById('starfield');
+    for (let i = 0; i < 100; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      star.style.left = Math.random() * 100 + '%';
+      star.style.top = Math.random() * 100 + '%';
+      star.style.width = Math.random() * 3 + 1 + 'px';
+      star.style.height = star.style.width;
+      star.style.animationDuration = Math.random() * 3 + 2 + 's';
+      star.style.animationDelay = Math.random() * 2 + 's';
+      starfield.appendChild(star);
+    }
+
+    renderForm();
+  </script>
+</body>
+</html>
+

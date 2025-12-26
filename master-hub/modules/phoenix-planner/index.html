@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phoenix Planner - My Hub</title>
+  <link rel="stylesheet" href="../../hub.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-theme="cosmic">
+  <div class="container">
+    <header class="header">
+      <div class="header-left">
+        <a href="../../index.html" class="btn">← Back to Hub</a>
+        <h1>🔥 Phoenix Planner</h1>
+      </div>
+    </header>
+
+    <!-- Daily Schedule -->
+    <section class="phoenix-section">
+      <h2>📅 Daily Schedule</h2>
+      <div class="schedule-list" id="scheduleList"></div>
+      <button class="btn btn-primary" id="addScheduleItem">+ Add Item</button>
+    </section>
+
+    <!-- My Plan for Today -->
+    <section class="phoenix-section">
+      <h2>✅ My Plan for Today</h2>
+      <div class="plan-list" id="planList"></div>
+    </section>
+
+    <!-- Supplement Tracker -->
+    <section class="phoenix-section">
+      <h2>💊 Supplement Tracker</h2>
+      <div class="supplement-groups">
+        <div class="supplement-group">
+          <h3>🌅 Morning (8:00 AM)</h3>
+          <div class="supplement-list" id="morningSupplements"></div>
+        </div>
+        <div class="supplement-group">
+          <h3>🌆 Afternoon (2:00 PM)</h3>
+          <div class="supplement-list" id="afternoonSupplements"></div>
+        </div>
+        <div class="supplement-group">
+          <h3>🌙 Evening (9:00 PM)</h3>
+          <div class="supplement-list" id="eveningSupplements"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Astrology Info -->
+    <section class="phoenix-section">
+      <h2>⭐ Astrology</h2>
+      <div class="astrology-info" id="astrologyInfo"></div>
+    </section>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="scheduleModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Add Schedule Item</h2>
+          <button class="modal-close" id="closeScheduleModal">&times;</button>
+        </div>
+        <form id="scheduleForm">
+          <input type="time" id="scheduleTime" class="input-field" required>
+          <input type="text" id="scheduleTitle" class="input-field" placeholder="Title" required>
+          <select id="scheduleCategory" class="input-field">
+            <option value="morning">🌅 Morning Routine</option>
+            <option value="physical">💪 Physical</option>
+            <option value="mental">🧠 Mental</option>
+            <option value="spiritual">🕉️ Spiritual</option>
+            <option value="supplements">💊 Supplements</option>
+            <option value="nutrition">🍎 Nutrition</option>
+          </select>
+          <input type="number" id="scheduleDuration" class="input-field" placeholder="Duration (minutes)" min="1">
+          <button type="submit" class="btn btn-primary">Add</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

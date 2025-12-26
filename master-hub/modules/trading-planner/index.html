@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trading Planner - My Hub</title>
+  <link rel="stylesheet" href="../../hub.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-theme="cosmic">
+  <div class="container">
+    <header class="header">
+      <div class="header-left">
+        <a href="../../index.html" class="btn">← Back to Hub</a>
+        <h1>📈 Trading Planner</h1>
+      </div>
+      <div>
+        <button class="btn" id="modeToggle">Mode: Futures</button>
+        <button class="btn btn-primary" id="newTradeBtn">+ New Trade</button>
+      </div>
+    </header>
+
+    <!-- Trading Stats -->
+    <section class="trading-section">
+      <h2>📊 Trading Statistics</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total P&L</div>
+          <div class="stat-value" id="totalPL">$0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Win Rate</div>
+          <div class="stat-value" id="winRate">0%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Trades</div>
+          <div class="stat-value" id="totalTrades">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg Win</div>
+          <div class="stat-value" id="avgWin">$0.00</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trade Journal -->
+    <section class="trading-section">
+      <h2>📝 Trade Journal</h2>
+      <div class="trade-list" id="tradeList"></div>
+    </section>
+
+    <!-- Trade Modal -->
+    <div class="modal-overlay" id="tradeModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="tradeModalTitle">New Trade</h2>
+          <button class="modal-close" id="closeTradeModal">&times;</button>
+        </div>
+        <form id="tradeForm">
+          <input type="text" id="tradeSymbol" class="input-field" placeholder="Symbol (e.g., MES, MNQ)" required>
+          <input type="number" id="entryPrice" class="input-field" placeholder="Entry Price" step="0.01" required>
+          <input type="number" id="exitPrice" class="input-field" placeholder="Exit Price" step="0.01" required>
+          <input type="number" id="contracts" class="input-field" placeholder="Contracts/Size" min="1" required>
+          <select id="tradeDirection" class="input-field">
+            <option value="long">Long</option>
+            <option value="short">Short</option>
+          </select>
+          <input type="text" id="setupType" class="input-field" placeholder="Setup Type">
+          <textarea id="tradeNotes" class="input-field" placeholder="Notes" rows="3"></textarea>
+          <input type="hidden" id="tradeId">
+          <div class="pl-display" id="plDisplay">P&L: $0.00</div>
+          <button type="submit" class="btn btn-primary">Save Trade</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

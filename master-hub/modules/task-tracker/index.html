@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Tracker - My Hub</title>
+  <link rel="stylesheet" href="../../hub.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-theme="cosmic">
+  <div class="container">
+    <header class="header">
+      <div class="header-left">
+        <a href="../../index.html" class="btn">← Back to Hub</a>
+        <h1>✅ Task Tracker</h1>
+      </div>
+      <button class="btn btn-primary" id="newTaskBtn">+ New Task</button>
+    </header>
+
+    <!-- Kanban Board -->
+    <div class="kanban-board" id="kanbanBoard">
+      <div class="kanban-column" data-status="backlog">
+        <div class="column-header">
+          <h2>Backlog</h2>
+          <span class="task-count" id="backlogCount">0</span>
+        </div>
+        <div class="column-content" ondrop="TaskTracker.drop(event)" ondragover="TaskTracker.allowDrop(event)"></div>
+      </div>
+
+      <div class="kanban-column" data-status="todo">
+        <div class="column-header">
+          <h2>To Do</h2>
+          <span class="task-count" id="todoCount">0</span>
+        </div>
+        <div class="column-content" ondrop="TaskTracker.drop(event)" ondragover="TaskTracker.allowDrop(event)"></div>
+      </div>
+
+      <div class="kanban-column" data-status="inprogress">
+        <div class="column-header">
+          <h2>In Progress</h2>
+          <span class="task-count" id="inprogressCount">0</span>
+        </div>
+        <div class="column-content" ondrop="TaskTracker.drop(event)" ondragover="TaskTracker.allowDrop(event)"></div>
+      </div>
+
+      <div class="kanban-column" data-status="review">
+        <div class="column-header">
+          <h2>Review</h2>
+          <span class="task-count" id="reviewCount">0</span>
+        </div>
+        <div class="column-content" ondrop="TaskTracker.drop(event)" ondragover="TaskTracker.allowDrop(event)"></div>
+      </div>
+
+      <div class="kanban-column" data-status="done">
+        <div class="column-header">
+          <h2>Done</h2>
+          <span class="task-count" id="doneCount">0</span>
+        </div>
+        <div class="column-content" ondrop="TaskTracker.drop(event)" ondragover="TaskTracker.allowDrop(event)"></div>
+      </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div class="modal-overlay" id="taskModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="taskModalTitle">New Task</h2>
+          <button class="modal-close" id="closeTaskModal">&times;</button>
+        </div>
+        <form id="taskForm">
+          <input type="text" id="taskTitle" class="input-field" placeholder="Task Title" required>
+          <textarea id="taskDescription" class="input-field" placeholder="Description" rows="3"></textarea>
+          <select id="taskPriority" class="input-field">
+            <option value="low">Low Priority</option>
+            <option value="medium" selected>Medium Priority</option>
+            <option value="high">High Priority</option>
+          </select>
+          <input type="date" id="taskDueDate" class="input-field">
+          <input type="hidden" id="taskId">
+          <input type="hidden" id="taskStatus">
+          <button type="submit" class="btn btn-primary">Save Task</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

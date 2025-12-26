@@ -1,0 +1,211 @@
+/* Diet Planner Styles */
+
+.diet-section {
+  background: var(--bg-card);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.diet-section h2 {
+  margin-bottom: var(--spacing-lg);
+  font-size: var(--font-size-2xl);
+}
+
+.fasting-timer {
+  text-align: center;
+  padding: var(--spacing-xl);
+}
+
+.timer-display {
+  margin-bottom: var(--spacing-lg);
+}
+
+.timer-status {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  margin-bottom: var(--spacing-md);
+  color: var(--accent-orange);
+}
+
+.timer-time {
+  font-size: var(--font-size-4xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-primary);
+}
+
+.timer-controls {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: center;
+  margin-bottom: var(--spacing-lg);
+}
+
+.eating-window {
+  padding: var(--spacing-md);
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-green);
+}
+
+.macros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.macro-card {
+  background: rgba(255, 255, 255, 0.05);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+}
+
+.macro-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.macro-value {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  margin-bottom: var(--spacing-md);
+}
+
+.macro-progress .progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.macro-progress .progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-green), var(--accent-blue));
+  transition: width var(--transition-base);
+}
+
+.meal-windows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.meal-window {
+  background: rgba(255, 255, 255, 0.03);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+}
+
+.meal-window h3 {
+  margin-bottom: var(--spacing-md);
+}
+
+.meal-list {
+  margin-bottom: var(--spacing-md);
+  min-height: 100px;
+}
+
+.meal-item {
+  background: rgba(255, 255, 255, 0.05);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.meal-item-info {
+  flex: 1;
+}
+
+.meal-item-name {
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+}
+
+.meal-item-macros {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.meal-item-calories {
+  font-weight: 600;
+  color: var(--accent-orange);
+}
+
+.water-tracker {
+  text-align: center;
+}
+
+.water-display {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  margin-bottom: var(--spacing-lg);
+  color: var(--accent-blue);
+}
+
+.water-controls {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: center;
+  margin-bottom: var(--spacing-lg);
+}
+
+.water-glasses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  justify-content: center;
+}
+
+.water-glass {
+  width: 40px;
+  height: 60px;
+  background: rgba(59, 130, 246, 0.3);
+  border: 2px solid var(--accent-blue);
+  border-radius: 0 0 8px 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.water-glass.filled {
+  background: var(--accent-blue);
+}
+
+.water-glass::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 0%;
+  background: var(--accent-blue);
+  transition: height var(--transition-base);
+}
+
+.water-glass.filled::before {
+  height: 100%;
+}
+
+.input-field {
+  width: 100%;
+  padding: var(--spacing-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
