@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soulmates - Love Compatibility & Biorhythms</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💕 Soulmates</h1>
+            <p class="tagline">Discover your compatibility, biorhythms, and connection topics</p>
+        </header>
+
+        <div class="input-section">
+            <div class="person-card">
+                <div class="icon">👨</div>
+                <h3>His Information</h3>
+                <label for="boy-name">Name</label>
+                <input type="text" id="boy-name" placeholder="Enter his name">
+                <label for="boy-dob">Date of Birth</label>
+                <input type="date" id="boy-dob">
+            </div>
+
+            <div class="heart-divider">
+                <div class="heart">❤️</div>
+            </div>
+
+            <div class="person-card">
+                <div class="icon">👩</div>
+                <h3>Her Information</h3>
+                <label for="girl-name">Name</label>
+                <input type="text" id="girl-name" placeholder="Enter her name">
+                <label for="girl-dob">Date of Birth</label>
+                <input type="date" id="girl-dob">
+            </div>
+        </div>
+
+        <button class="analyze-btn" onclick="analyzeCompatibility()">
+            ✨ Analyze Compatibility
+        </button>
+
+        <div id="results" class="results-section" style="display: none;">
+            <!-- Compatibility Score -->
+            <div class="result-card compatibility-card">
+                <h2>💖 Compatibility Score</h2>
+                <div class="score-circle">
+                    <div class="score-value" id="compatibility-score">0</div>
+                    <div class="score-label">%</div>
+                </div>
+                <p id="compatibility-message" class="compatibility-message"></p>
+                <div class="compatibility-breakdown">
+                    <div class="breakdown-item">
+                        <span class="label">Emotional Connection:</span>
+                        <div class="bar-container">
+                            <div class="bar" id="emotional-bar"></div>
+                        </div>
+                        <span id="emotional-score" class="score-text">0%</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span class="label">Intellectual Bond:</span>
+                        <div class="bar-container">
+                            <div class="bar" id="intellectual-bar"></div>
+                        </div>
+                        <span id="intellectual-score" class="score-text">0%</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span class="label">Physical Chemistry:</span>
+                        <div class="bar-container">
+                            <div class="bar" id="physical-bar"></div>
+                        </div>
+                        <span id="physical-score" class="score-text">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Biorhythms -->
+            <div class="result-card biorhythm-card">
+                <h2>🌊 Current Biorhythms</h2>
+                <div class="biorhythm-section">
+                    <h3>His Biorhythms</h3>
+                    <canvas id="boy-biorhythm" width="400" height="200"></canvas>
+                    <div class="biorhythm-stats">
+                        <div class="stat">
+                            <span class="stat-label">Physical:</span>
+                            <span id="boy-physical" class="stat-value"></span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Emotional:</span>
+                            <span id="boy-emotional" class="stat-value"></span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Intellectual:</span>
+                            <span id="boy-intellectual" class="stat-value"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="biorhythm-section">
+                    <h3>Her Biorhythms</h3>
+                    <canvas id="girl-biorhythm" width="400" height="200"></canvas>
+                    <div class="biorhythm-stats">
+                        <div class="stat">
+                            <span class="stat-label">Physical:</span>
+                            <span id="girl-physical" class="stat-value"></span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Emotional:</span>
+                            <span id="girl-emotional" class="stat-value"></span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Intellectual:</span>
+                            <span id="girl-intellectual" class="stat-value"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conversation Topics -->
+            <div class="result-card topics-card">
+                <h2>💬 Topics to Discuss & Connect</h2>
+                <p class="topics-intro">Based on your compatibility and current biorhythms, here are personalized topics to help you grow closer:</p>
+                <div id="topics-list" class="topics-list"></div>
+            </div>
+
+            <!-- Zodiac Insights -->
+            <div class="result-card zodiac-card">
+                <h2>⭐ Zodiac Insights</h2>
+                <div class="zodiac-info">
+                    <div class="zodiac-person">
+                        <h3 id="boy-zodiac"></h3>
+                        <p id="boy-zodiac-desc"></p>
+                    </div>
+                    <div class="zodiac-person">
+                        <h3 id="girl-zodiac"></h3>
+                        <p id="girl-zodiac-desc"></p>
+                    </div>
+                </div>
+                <div class="zodiac-compatibility">
+                    <h3>Zodiac Compatibility</h3>
+                    <p id="zodiac-compatibility-text"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Made with ❤️ for Soulmates everywhere</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
